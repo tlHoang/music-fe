@@ -4,6 +4,7 @@ import { JWT } from "next-auth/jwt";
 interface IUser {
   _id: string;
   email: string;
+  access_token: string;
 }
 
 declare module "next-auth/jwt" {
@@ -34,7 +35,8 @@ declare module "next-auth" {
    * Returned by `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
    */
   interface Session {
-    user: User;
+    _id: string;
+    email: string;
     access_token: string;
     refresh_token: string;
     access_expire: number;

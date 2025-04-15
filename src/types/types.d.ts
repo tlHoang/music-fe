@@ -1,0 +1,38 @@
+interface IUser {
+  _id: string;
+  username: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  profilePicture?: string;
+  bio?: string;
+  name?: string;
+}
+
+interface ISong {
+  _id: string;
+  title: string;
+  duration: number;
+  uploadDate: Date;
+  playCount: number;
+  likeCount: number;
+  commentCount: number;
+  lyrics: string;
+  audioUrl: string;
+  thumbnail: string;
+  visibility: string;
+  userId: IUser;
+}
+
+interface IPlaylist {
+  _id: string;
+  name: string;
+  userId: IUser;
+  songs: ISong[];
+  visibility: string;
+}
+
+interface ISongsAndPlaylists {
+  songs: ISong[];
+  playlists: IPlaylist[];
+}

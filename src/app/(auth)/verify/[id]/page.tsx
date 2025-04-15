@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { sendRequest } from "@/utils/api";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 const VerifyPage = () => {
+  const router = useRouter();
   const params = useParams<{ id: string }>();
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -20,11 +21,11 @@ const VerifyPage = () => {
       },
     });
     if (res.statusCode === 200) {
-      console.log("Account activated successfully!");
+      toast.success("Verify successfully!");
+      router.push("/login");
     } else {
       toast.error(res.message);
     }
-    console.log(res);
   };
 
   const handleResend = async () => {
@@ -35,6 +36,11 @@ const VerifyPage = () => {
         _id: params?.id,
       },
     });
+    if (res.statusCode === 200) {
+      toast.success("Resend verification code successfully!");
+    } else {
+      toast.error(res.message);
+    }
   };
   return (
     <>

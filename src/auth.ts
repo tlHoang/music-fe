@@ -30,7 +30,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           },
         });
         if (res.ok) {
-          return res.data?.user || null;
+          if (!res.data) return null;
+          console.log("res.data", res.data);
+          return {
+            _id: res.data?.user._id,
+            email: res.data?.user.email,
+            access_token: res.data?.access_token,
+          };
         } else if (res.statusCode === 401) {
           if (res.message === "Invalid email or password") {
             throw new CustomSignInError("InvalidEmailOrPassword");
@@ -55,6 +61,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     jwt({ token, user }) {
       if (user) {
+        // User is available during sign-in
         token.user = user as IUser;
       }
       return token;

@@ -1,8 +1,14 @@
 import { signIn } from "next-auth/react";
 // import { toast } from "react-toastify"
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
-const LoginForm = () => {
+interface IProps {
+  setReactiveModalState?: (state: boolean) => void;
+}
+
+const LoginForm = (props: IProps) => {
+  const { setReactiveModalState } = props;
   const router = useRouter();
   const credentialsAction = async (formData: FormData) => {
     const { email, password } = Object.fromEntries(formData.entries());
@@ -14,15 +20,16 @@ const LoginForm = () => {
       });
       if (result?.error) {
         if (result.code === "InvalidEmailOrPassword") {
-          // toast.error("Invalid email or password");
+          toast.error("Invalid email or password");
         } else if (result.code === "AccountIsNotActivated") {
-          router.push("/verify");
+          toast.error("Account is not activated");
+          setReactiveModalState?.(true);
         } else {
-          // toast.error("Invalid credentials");
+          toast.error("Invalid credentials");
         }
       } else {
-        // toast.success("Login successful")
-        router.push("/dashboard");
+        toast.success("Login successful");
+        router.push("/");
       }
     } catch (error) {
       console.error("An unexpected error occurred:", error);

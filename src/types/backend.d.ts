@@ -34,6 +34,6 @@ declare global {
 
   interface ILogin {
     user: IUser;
-    accessToken: string;
+    access_token: string;
   }
 }

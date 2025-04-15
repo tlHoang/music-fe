@@ -8,10 +8,10 @@ const LoginPage = () => {
   const [isOpen, setIsOpen] = useState(false);
   return (
     <>
-      <LoginForm />
-      <Button onClick={() => setIsOpen(!isOpen)} className="mt-4">
+      <LoginForm setReactiveModalState={setIsOpen} />
+      {/* <Button onClick={() => setIsOpen(!isOpen)} className="mt-4">
         Open Modal
-      </Button>
+      </Button> */}
       <ReactiveModal isOpen={isOpen} setIsOpen={setIsOpen} />
     </>
   );
