@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { sendRequest } from "@/utils/api";
 import { useRouter } from "next/navigation";
@@ -20,7 +20,7 @@ const RegisterForm = () => {
         email: formData.get("email") as string,
         password: formData.get("password") as string,
       },
-    })
+    });
     if (res.ok) {
       // TODO: handle success, e.g., redirect to login page or show success message
       router.push(`/verify/${res.data?._id}`);
@@ -28,7 +28,7 @@ const RegisterForm = () => {
     } else {
       // TODO: handle error, e.g., show error message
     }
-  }
+  };
 
   return (
     <>
@@ -36,11 +36,16 @@ const RegisterForm = () => {
       <form onSubmit={handleSubmit}>
         <input type="text" name="username" placeholder="Username" required />
         <input type="email" name="email" placeholder="Email" required />
-        <input type="password" name="password" placeholder="Password" required />
+        <input
+          type="password"
+          name="password"
+          placeholder="Password"
+          required
+        />
         <button type="submit">Register</button>
       </form>
     </>
-  )
-}
+  );
+};
 
 export default RegisterForm;

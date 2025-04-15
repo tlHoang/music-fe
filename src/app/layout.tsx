@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Bounce, ToastContainer } from "react-toastify";
+import { ThemeProvider } from "@/components/app/theme-provinder";
 // import { auth } from "@/auth";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,14 +26,14 @@ export default async function RootLayout({
 }>) {
   // const session = await auth();
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ToastContainer
+        {/* <ToastContainer
           position="bottom-right"
-          autoClose={5000}
-          hideProgressBar={false}
+          autoClose={3000}
+          hideProgressBar
           newestOnTop={false}
           closeOnClick={false}
           rtl={false}
@@ -41,8 +42,16 @@ export default async function RootLayout({
           pauseOnHover
           theme="light"
           transition={Bounce}
-        />
-        {children}
+        /> */}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
+        <Toaster position="bottom-right" expand={true} richColors closeButton />
       </body>
     </html>
   );

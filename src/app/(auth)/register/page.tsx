@@ -6,6 +6,6 @@ const RegisterPage = () => {
       <RegisterForm />
     </>
   );
-}
+};
 
 export default RegisterPage;

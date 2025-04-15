@@ -5,6 +5,6 @@ const DashboardPage = () => {
       <p>Welcome to the admin dashboard!</p>
     </div>
   );
-}
+};
 
 export default DashboardPage;
