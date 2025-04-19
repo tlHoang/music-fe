@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { sendRequest } from "@/utils/api";
 import { useSession } from "next-auth/react";
+import UploadMusic from "@/components/user/upload-music.component";
 
 const UserProfilePage = () => {
   const [userData, setUserData] = useState<IUser | undefined>(undefined);

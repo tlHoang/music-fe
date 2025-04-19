@@ -22,10 +22,15 @@ const UserHeader = () => {
 
       {/* User Actions */}
       <div className="flex items-center space-x-4">
-        <Link href="/profile">Profile</Link>
+        <Link href="/player" className="hover:text-blue-600">
+          Player
+        </Link>
+        <Link href="/profile" className="hover:text-blue-600">
+          Profile
+        </Link>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
-          className="text-red-500"
+          className="text-red-500 hover:text-red-700"
         >
           Logout
         </button>

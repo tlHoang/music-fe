@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import UserHeader from "@/components/user/header.component";
 import { SessionProvider } from "next-auth/react";
+import { PlayerProvider } from "@/components/app/player-context";
+import PersistentPlayer from "@/components/user/persistent-player";
 
 const AdminLayout = async ({
   children,
@@ -12,8 +14,13 @@ const AdminLayout = async ({
 
   return (
     <SessionProvider session={session}>
-      <UserHeader />
-      {children}
+      <PlayerProvider>
+        <div className="flex flex-col min-h-screen">
+          <UserHeader />
+          <main className="flex-grow pb-16">{children}</main>
+          <PersistentPlayer />
+        </div>
+      </PlayerProvider>
     </SessionProvider>
   );
 };
