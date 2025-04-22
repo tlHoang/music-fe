@@ -8,6 +8,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePlayer } from "@/components/app/player-context";
+import LikeButton from "@/components/user/like-button.component";
+import { Play, Pause } from "lucide-react";
 
 interface User {
   _id: string;
@@ -43,7 +45,7 @@ const UserProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [followLoading, setFollowLoading] = useState(false);
-  const { playTrack } = usePlayer();
+  const { playTrack, currentTrack, isPlaying, togglePlayPause } = usePlayer();
 
   const isCurrentUser = session?.user?._id === userId;
 
@@ -279,6 +281,10 @@ const UserProfilePage = () => {
     }
   };
 
+  const isTrackPlaying = (trackId: string) => {
+    return currentTrack?._id === trackId && isPlaying;
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[70vh]">
@@ -382,38 +388,47 @@ const UserProfilePage = () => {
             <div className="bg-white rounded-lg shadow overflow-hidden">
               <ul className="divide-y divide-gray-200">
                 {tracks.map((track) => (
-                  <li
-                    key={track._id}
-                    className="p-4 hover:bg-gray-50 cursor-pointer"
-                    onClick={() => handlePlayTrack(track)}
-                  >
+                  <li key={track._id} className="p-4 hover:bg-gray-50 group">
                     <div className="flex items-center">
-                      <div className="h-12 w-12 flex-shrink-0 bg-gray-200 rounded-md mr-4 flex items-center justify-center">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="opacity-50"
-                        >
-                          <circle cx="12" cy="12" r="10"></circle>
-                          <polygon points="10 8 16 12 10 16 10 8"></polygon>
-                        </svg>
+                      <div
+                        className="h-12 w-12 flex-shrink-0 bg-gray-200 rounded-md mr-4 flex items-center justify-center cursor-pointer relative group"
+                        onClick={() =>
+                          isTrackPlaying(track._id)
+                            ? togglePlayPause()
+                            : handlePlayTrack(track)
+                        }
+                      >
+                        {isTrackPlaying(track._id) ? (
+                          <Pause className="text-gray-600" size={20} />
+                        ) : (
+                          <Play className="text-gray-600 ml-0.5" size={20} />
+                        )}
                       </div>
-                      <div className="flex-grow min-w-0">
+
+                      <div
+                        className="flex-grow min-w-0 cursor-pointer"
+                        onClick={() => handlePlayTrack(track)}
+                      >
                         <p className="font-medium truncate">{track.title}</p>
                         <div className="flex justify-between text-xs text-gray-500">
                           <span>{formatDuration(track.duration)}</span>
                           <span>{formatDate(track.uploadDate)}</span>
                         </div>
                       </div>
-                      <div className="ml-4 flex-shrink-0 text-sm text-gray-500">
-                        {track.plays || 0} plays
+
+                      <div className="ml-4 flex items-center gap-2">
+                        <span className="text-sm text-gray-500">
+                          {track.plays || 0} plays
+                        </span>
+
+                        {/* Add Like Button with Queue functionality */}
+                        <LikeButton
+                          songId={track._id}
+                          size="sm"
+                          showCount={true}
+                          song={track}
+                          showQueueOption={true}
+                        />
                       </div>
                     </div>
                   </li>

@@ -168,7 +168,8 @@ const MyMusicPage = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[70vh]">
-        <p className="text-xl">Loading your tracks...</p>
+        {/* <p className="text-xl">Loading your tracks...</p> */}
+        <p></p>
       </div>
     );
   }

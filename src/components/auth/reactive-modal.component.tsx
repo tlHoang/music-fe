@@ -47,7 +47,7 @@ export default function ReactiveModal(props: Props) {
         email: email,
       },
     });
-    console.log(res);
+    // console.log(res);
     if (res.statusCode === 200) {
       setIsOpen(false);
       router.push(`/verify/${res?.data?._id}`);

@@ -31,7 +31,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         });
         if (res.ok) {
           if (!res.data) return null;
-          console.log("res.data", res.data);
+          // console.log("res.data", res.data);
           return {
             _id: res.data?.user._id,
             email: res.data?.user.email,

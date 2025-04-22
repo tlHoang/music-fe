@@ -1,115 +1,591 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
-import { sendRequest } from "@/utils/api";
+import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import UploadMusic from "@/components/user/upload-music.component";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import Link from "next/link";
+import Image from "next/image";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { usePlayer } from "@/components/app/player-context";
+import LikeButton from "@/components/user/like-button.component";
+import { Play, Pause, Edit, Upload } from "lucide-react";
+import { toast } from "sonner";
 
 const UserProfilePage = () => {
-  const [userData, setUserData] = useState<IUser | undefined>(undefined);
-  const [userSongs, setUserSongs] = useState<ISong[]>([]);
-  const [userPlaylists, setUserPlaylists] = useState<IPlaylist[]>([]);
+  const { data: session, update: updateSession } = useSession();
+  const userId = session?.user?._id;
 
-  const { data: session } = useSession();
-  console.log("Session data:", session);
+  // User state
+  const [userData, setUserData] = useState<IUser | undefined>(undefined);
+  const [tracks, setTracks] = useState<ISong[]>([]);
+  const [userPlaylists, setUserPlaylists] = useState<IPlaylist[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Edit mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    bio: "",
+  });
+  const [profilePicture, setProfilePicture] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Player context
+  const { playTrack, currentTrack, isPlaying, togglePlayPause } = usePlayer();
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const userId = session?.user?._id;
-        const userResponse = await sendRequest<IBackendRes<IUser>>({
-          url: `${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`,
-          headers: {
-            Authorization: `Bearer ${session?.user?.access_token}`,
-          },
-          method: "GET",
-        });
-        setUserData(userResponse.data);
-        console.log("User data:", userResponse.data);
+    if (session?.user) {
+      fetchUserData();
+    }
+  }, [session]);
 
-        const songsPlaylistsResponse = await sendRequest<
-          IBackendRes<ISongsAndPlaylists>
-        >({
-          url: `${process.env.NEXT_PUBLIC_API_URL}/users/${userId}/songs-playlists`,
+  useEffect(() => {
+    if (userData) {
+      setEditForm({
+        name: userData.name || "",
+        bio: userData.bio || "",
+      });
+    }
+  }, [userData]);
+
+  const fetchUserData = async () => {
+    if (!userId) return;
+
+    setLoading(true);
+    setError(null);
+    try {
+      // Fetch user profile data
+      const userRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`,
+        {
           headers: {
             Authorization: `Bearer ${session?.user?.access_token}`,
           },
           method: "GET",
-        });
-        setUserSongs(songsPlaylistsResponse.data?.songs || []);
-        setUserPlaylists(songsPlaylistsResponse.data?.playlists || []);
-      } catch (error) {
-        console.error("Error fetching user data:", error);
+        }
+      );
+
+      if (!userRes.ok) {
+        throw new Error(`Failed to fetch user data: ${userRes.status}`);
       }
-    };
 
-    fetchUserData();
-  }, []);
+      const userResponse = await userRes.json();
+      setUserData(userResponse.data);
 
-  if (!userData) {
-    return <div></div>;
+      // Fetch user tracks
+      const tracksRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/songs/user/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${session?.user?.access_token}`,
+          },
+          method: "GET",
+        }
+      );
+
+      if (!tracksRes.ok) {
+        throw new Error(`Failed to fetch tracks: ${tracksRes.status}`);
+      }
+
+      const tracksData = (await tracksRes.json()).data;
+      setTracks(tracksData || []);
+
+      // Fetch user playlists
+      const playlistsRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/users/${userId}/playlists`,
+        {
+          headers: {
+            Authorization: `Bearer ${session?.user?.access_token}`,
+          },
+          method: "GET",
+        }
+      );
+
+      if (playlistsRes.ok) {
+        const playlistsData = (await playlistsRes.json()).data;
+        setUserPlaylists(playlistsData || []);
+      }
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      setError("Failed to load profile data");
+      toast.error("Failed to load profile data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProfileUpdate = async () => {
+    try {
+      // Prepare fetch options
+      let fetchOptions: RequestInit = {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${session?.user?.access_token}`,
+        },
+      };
+
+      // Create form data if there's a profile picture to upload
+      if (profilePicture) {
+        const formData = new FormData();
+        formData.append("profilePicture", profilePicture);
+        formData.append("name", editForm.name);
+        formData.append("bio", editForm.bio);
+        fetchOptions.body = formData;
+      } else {
+        fetchOptions.body = JSON.stringify(editForm);
+        // Add Content-Type header only when not using FormData
+        (fetchOptions.headers as Record<string, string>)["Content-Type"] =
+          "application/json";
+      }
+
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`,
+        fetchOptions
+      );
+
+      if (!res.ok) {
+        throw new Error(`Failed to update profile: ${res.status}`);
+      }
+
+      const response = await res.json();
+
+      if (response.data) {
+        setUserData(response.data);
+        // Update session data if needed
+        updateSession({
+          user: {
+            ...session?.user,
+            name: response.data.name,
+          },
+        });
+        setIsEditing(false);
+        setPreviewUrl(null);
+        setProfilePicture(null);
+        toast.success("Profile updated successfully");
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error("Failed to update profile");
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setProfilePicture(file);
+
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreviewUrl(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setEditForm((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  };
+
+  const handlePlayTrack = (track: ISong) => {
+    // if (playTrack) {
+    //   const audioUrl = track.audioUrl.startsWith("/api/audio")
+    //     ? track.audioUrl
+    //     : `/api/audio?url=${encodeURIComponent(track.audioUrl)}`;
+    // playTrack({
+    //   ...track,
+    //   audioUrl,
+    // });
+    // }
+  };
+
+  const isTrackPlaying = (trackId: string) => {
+    return currentTrack?._id === trackId && isPlaying;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-[70vh]">
+        <p className="text-xl">Loading profile...</p>
+      </div>
+    );
+  }
+
+  if (error || !userData) {
+    return (
+      <div className="container mx-auto p-6 max-w-4xl">
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-4">
+          {error || "Failed to load profile data"}
+        </div>
+        <Button onClick={fetchUserData} className="mt-4">
+          Retry
+        </Button>
+      </div>
+    );
   }
 
   return (
-    <div className={cn("profile-page", "p-6 bg-gray-100 min-h-screen")}>
-      {" "}
-      {/* Add padding and background */}
-      <header
-        className={cn("profile-header", "flex items-center space-x-4 mb-6")}
-      >
-        {" "}
-        {/* Flex layout for header */}
-        <img
-          src={userData.profilePicture || "/default-profile.jpg"} // Placeholder for profile picture
-          alt="User Profile"
-          className={cn(
-            "profile-picture",
-            "w-24 h-24 rounded-full border border-gray-300"
+    <div className="container mx-auto p-6">
+      {/* User profile header */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+          {isEditing ? (
+            <div className="relative">
+              <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-gray-200 flex-shrink-0">
+                <Image
+                  src={
+                    previewUrl ||
+                    userData.profilePicture ||
+                    "/default-profile.jpg"
+                  }
+                  alt="User Profile"
+                  width={128}
+                  height={128}
+                  className="object-cover w-full h-full"
+                />
+              </div>
+              <div className="absolute bottom-0 right-0">
+                <label
+                  htmlFor="profile-picture"
+                  className="cursor-pointer bg-primary text-white p-2 rounded-full shadow-md hover:bg-primary/90 transition-colors"
+                >
+                  <Upload size={16} />
+                  <input
+                    id="profile-picture"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+            </div>
+          ) : (
+            <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-gray-200 flex-shrink-0">
+              <Image
+                src={userData.profilePicture || "/default-profile.jpg"}
+                alt="User avatar"
+                width={128}
+                height={128}
+                className="object-cover w-full h-full"
+              />
+            </div>
           )}
-        />
-        <div>
-          <h1
-            className={cn("profile-name", "text-2xl font-bold text-gray-800")}
-          >
-            {userData.name || userData.email}
-          </h1>
-          <p className={cn("profile-bio", "text-gray-600")}>{userData.bio}</p>
+
+          <div className="flex-grow text-center md:text-left">
+            {isEditing ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-1 block">
+                    Display Name
+                  </label>
+                  <Input
+                    name="name"
+                    value={editForm.name}
+                    onChange={handleInputChange}
+                    placeholder="Your display name"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Bio</label>
+                  <Textarea
+                    name="bio"
+                    value={editForm.bio}
+                    onChange={handleInputChange}
+                    placeholder="Tell others about yourself"
+                    rows={3}
+                  />
+                </div>
+              </div>
+            ) : (
+              <>
+                <h1 className="text-2xl font-bold mb-2">
+                  {userData.name || userData.username || userData.email}
+                </h1>
+                {userData.bio ? (
+                  <p className="text-gray-600 dark:text-gray-300 mb-4">
+                    {userData.bio}
+                  </p>
+                ) : (
+                  <p className="text-gray-400 dark:text-gray-500 italic mb-4">
+                    No bio provided
+                  </p>
+                )}
+              </>
+            )}
+
+            {!isEditing && (
+              <div className="flex flex-wrap items-center gap-4 justify-center md:justify-start mb-4">
+                <Link
+                  href={`/profile/${userId}/followers`}
+                  className="text-sm text-gray-600 hover:underline"
+                >
+                  <span className="font-semibold">
+                    {/* {userData.followersCount || 0} */}
+                    temp
+                  </span>{" "}
+                  Followers
+                </Link>
+                <Link
+                  href={`/profile/${userId}/following`}
+                  className="text-sm text-gray-600 hover:underline"
+                >
+                  <span className="font-semibold">
+                    {/* {userData.followingCount || 0} */}
+                    temp
+                  </span>{" "}
+                  Following
+                </Link>
+                <span className="text-sm text-gray-600">
+                  <span className="font-semibold">{tracks.length}</span> Tracks
+                </span>
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-center md:justify-start">
+              {isEditing ? (
+                <>
+                  <Button onClick={handleProfileUpdate}>Save Changes</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditing(false);
+                      setPreviewUrl(null);
+                      setProfilePicture(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    onClick={() => setIsEditing(true)}
+                    variant="outline"
+                    className="flex gap-2 items-center"
+                  >
+                    <Edit size={16} /> Edit Profile
+                  </Button>
+                  <Link href="/profile/my-music">
+                    <Button variant="outline">Manage Your Music</Button>
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
         </div>
-      </header>
-      <section className={cn("uploaded-songs", "mb-6")}>
-        {" "}
-        {/* Section styling */}
-        <h2 className={cn("text-xl font-semibold text-gray-800 mb-4")}>
-          Uploaded Songs
-        </h2>
-        <ul className={cn("space-y-2")}>
-          {" "}
-          {/* Add spacing between list items */}
-          {userSongs.map((song) => (
-            <li key={song._id} className={cn("p-4 bg-white rounded shadow-sm")}>
-              {song.title}
-            </li>
-          ))}
-        </ul>
-      </section>
-      <section className={cn("user-playlists")}>
-        <h2 className={cn("text-xl font-semibold text-gray-800 mb-4")}>
-          Playlists
-        </h2>
-        <ul className={cn("space-y-2")}>
-          {" "}
-          {/* Add spacing between list items */}
-          {userPlaylists.map((playlist) => (
-            <li
-              key={playlist._id}
-              className={cn("p-4 bg-white rounded shadow-sm")}
-            >
-              {playlist.name}
-            </li>
-          ))}
-        </ul>
-      </section>
+      </div>
+
+      {/* Tabs for tracks and other content */}
+      {!isEditing && (
+        <Tabs defaultValue="tracks" className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger key="tracks-tab" value="tracks">
+              Tracks
+            </TabsTrigger>
+            <TabsTrigger key="playlists-tab" value="playlists">
+              Playlists
+            </TabsTrigger>
+            <TabsTrigger key="about-tab" value="about">
+              About
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="tracks">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Your Tracks</h2>
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="flex gap-2 items-center">
+                    <Upload size={16} /> Upload New
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Upload a new track</DialogTitle>
+                  </DialogHeader>
+                  {/* You can implement upload form here or import an existing component */}
+                  <p className="text-center py-4">Upload form would go here</p>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            {tracks.length === 0 ? (
+              <div className="bg-gray-50 dark:bg-gray-900 p-8 rounded-lg text-center">
+                <h2 className="text-xl font-semibold mb-4">No tracks found</h2>
+                <p className="mb-4">You haven't uploaded any tracks yet.</p>
+                <Button asChild>
+                  <Link href="/upload">Upload Your First Track</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {tracks.map((track) => (
+                    <li
+                      key={track._id}
+                      className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700 group"
+                    >
+                      <div className="flex items-center">
+                        <div
+                          className="h-12 w-12 flex-shrink-0 bg-gray-200 dark:bg-gray-700 rounded-md mr-4 flex items-center justify-center cursor-pointer relative group"
+                          onClick={() =>
+                            isTrackPlaying(track._id)
+                              ? togglePlayPause()
+                              : handlePlayTrack(track)
+                          }
+                        >
+                          {false ? (
+                            <div></div>
+                          ) : // {track.imageUrl ? (
+                          // <Image
+                          //   src={track.imageUrl}
+                          //   alt={track.title}
+                          //   width={48}
+                          //   height={48}
+                          //   className="object-cover w-full h-full rounded-md"
+                          // />
+                          null}
+                          <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center rounded-md">
+                            {isTrackPlaying(track._id) ? (
+                              <Pause className="text-white" size={20} />
+                            ) : (
+                              <Play className="text-white ml-0.5" size={20} />
+                            )}
+                          </div>
+                        </div>
+
+                        <div
+                          className="flex-grow min-w-0 cursor-pointer"
+                          onClick={() => handlePlayTrack(track)}
+                        >
+                          <p className="font-medium truncate">{track.title}</p>
+                          <div className="flex justify-between text-xs text-gray-500">
+                            <span>{formatDuration(track.duration || 0)}</span>
+                            <span>
+                              {formatDate(track.uploadDate.toString())}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="ml-4 flex items-center gap-2">
+                          <span className="text-sm text-gray-500">
+                            {/* {track.plays || 0} plays */}
+                            temp plays
+                          </span>
+
+                          {/* Add Like Button with Queue functionality */}
+                          <LikeButton
+                            songId={track._id}
+                            size="sm"
+                            showCount={true}
+                            song={track}
+                            showQueueOption={true}
+                          />
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="playlists">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Your Playlists</h2>
+              <Button size="sm">Create Playlist</Button>
+            </div>
+
+            {userPlaylists.length === 0 ? (
+              <div className="bg-gray-50 dark:bg-gray-900 p-8 rounded-lg text-center">
+                <h2 className="text-xl font-semibold mb-4">
+                  No playlists found
+                </h2>
+                <p className="mb-4">You haven't created any playlists yet.</p>
+                <Button>Create Your First Playlist</Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                {userPlaylists.map((playlist) => (
+                  <div
+                    key={playlist._id}
+                    className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <h3 className="font-medium text-lg mb-1">
+                      {playlist.name}
+                    </h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                      {playlist.songs?.length || 0} tracks
+                    </p>
+                    <Button size="sm" variant="outline" className="w-full">
+                      View Playlist
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="about">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+              <h2 className="text-xl font-semibold mb-4">
+                About {userData.name || userData.username || userData.email}
+              </h2>
+              {userData.bio ? (
+                <p className="text-gray-700 dark:text-gray-300">
+                  {userData.bio}
+                </p>
+              ) : (
+                <p className="text-gray-500">
+                  You haven't added a bio yet. Edit your profile to add one.
+                </p>
+              )}
+
+              <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+                <p className="mb-2">Email: {userData.email}</p>
+                <p>
+                  Account created:{" "}
+                  {/* {userData.createdAt
+                    ? formatDate(userData.createdAt)
+                    : "Unknown"} */}
+                </p>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 };

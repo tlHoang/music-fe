@@ -24,7 +24,7 @@ const RegisterForm = () => {
     if (res.ok) {
       // TODO: handle success, e.g., redirect to login page or show success message
       router.push(`/verify/${res.data?._id}`);
-      console.log("Registration successful:", res.data);
+      // console.log("Registration successful:", res.data);
     } else {
       // TODO: handle error, e.g., show error message
     }

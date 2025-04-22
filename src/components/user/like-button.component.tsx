@@ -4,9 +4,17 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Heart } from "lucide-react";
+import { Heart, ListMusic } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useLike } from "@/components/app/like-context";
+import { usePlayer } from "@/components/app/player-context";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 interface LikeButtonProps {
   songId: string;
@@ -16,6 +24,9 @@ interface LikeButtonProps {
   showCount?: boolean;
   className?: string;
   onLikeChange?: (isLiked: boolean, newCount: number) => void;
+  song?: any; // Optional full song object for queue functionality
+  showQueueOption?: boolean; // Whether to show the queue option
+  disableQueueOption?: boolean; // Whether to disable the queue option
 }
 
 export default function LikeButton({
@@ -26,9 +37,13 @@ export default function LikeButton({
   showCount = true,
   className,
   onLikeChange,
+  song,
+  showQueueOption = true,
+  disableQueueOption = false,
 }: LikeButtonProps) {
   const { data: session } = useSession();
   const { likedSongs, setLikeStatus, isLiked: getIsLiked } = useLike();
+  const { addToQueue, addNextToQueue } = usePlayer();
   const [isLiked, setIsLiked] = useState(initialIsLiked || getIsLiked(songId));
   const [likeCount, setLikeCount] = useState(initialLikeCount);
   const [isLoading, setIsLoading] = useState(false);
@@ -175,6 +190,46 @@ export default function LikeButton({
     }
   };
 
+  // Queue functionality
+  const getFullAudioUrl = (url: string) => {
+    if (!url) return "";
+    try {
+      if (url.startsWith("/api/audio?url=")) {
+        return url;
+      }
+      return `/api/audio?url=${encodeURIComponent(url)}`;
+    } catch (e) {
+      console.error("Error formatting audio URL:", e);
+      return "";
+    }
+  };
+
+  const handleAddToQueue = () => {
+    if (!song || !song.audioUrl) {
+      console.error("Cannot add to queue: Missing song data");
+      return;
+    }
+
+    const trackToQueue = { ...song };
+    trackToQueue.audioUrl = getFullAudioUrl(song.audioUrl);
+
+    addToQueue(trackToQueue);
+    toast.success(`Added "${song.title || "Track"}" to the end of your queue`);
+  };
+
+  const handlePlayNext = () => {
+    if (!song || !song.audioUrl) {
+      console.error("Cannot play next: Missing song data");
+      return;
+    }
+
+    const trackToQueue = { ...song };
+    trackToQueue.audioUrl = getFullAudioUrl(song.audioUrl);
+
+    addNextToQueue(trackToQueue);
+    toast.success(`"${song.title || "Track"}" will play next`);
+  };
+
   // Size classes for different button sizes
   const sizeClasses = {
     sm: "h-4 w-4",
@@ -190,7 +245,7 @@ export default function LikeButton({
         size="icon"
         className={cn(
           "rounded-full p-2 transition-colors",
-          isLiked ? "bg-red-100 hover:bg-red-400 text-white border-red-500" : ""
+          isLiked ? "bg-red-0 hover:bg-red-400 text-white border-red-500" : ""
         )}
         onClick={handleLike}
         disabled={isLoading || !session?.user}
@@ -226,6 +281,37 @@ export default function LikeButton({
         >
           {likeCount > 0 ? likeCount : ""}
         </span>
+      )}
+
+      {/* Queue Button */}
+      {showQueueOption && song && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="rounded-full p-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
+              disabled={disableQueueOption}
+            >
+              <ListMusic className={sizeClasses[size]} />
+              <span className="sr-only">Add to queue</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuItem
+              onClick={handleAddToQueue}
+              className="flex items-center gap-2"
+            >
+              <span>Add to Queue</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handlePlayNext}
+              className="flex items-center gap-2"
+            >
+              <span>Play Next</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
     </div>
   );

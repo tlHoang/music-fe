@@ -52,7 +52,7 @@ export default function CommentSection({
     }
   }, [songId]);
 
-  console.log(comments);
+  // console.log(comments);
 
   const fetchComments = async () => {
     try {
@@ -123,7 +123,7 @@ export default function CommentSection({
 
       const result = await response.json();
 
-      console.log(result);
+      // console.log(result);
 
       if (response.ok && result.data) {
         // Add the new comment to the list with user info

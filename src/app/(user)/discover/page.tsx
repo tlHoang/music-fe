@@ -46,7 +46,7 @@ const DiscoverPage = () => {
       });
 
       if (response.data) {
-        console.log("Users data from API:", response.data);
+        // console.log("Users data from API:", response.data);
         // Initialize followUpdates with current follow status from API
         const initialFollowStates: Record<string, boolean> = {};
         response.data.forEach((user: User) => {
@@ -89,7 +89,7 @@ const DiscoverPage = () => {
       );
 
       const data = await response.json();
-      console.log("Follow response:", data);
+      // console.log("Follow response:", data);
 
       if (!data.data.success) {
         // Revert optimistic update on failure

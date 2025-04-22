@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Play, Pause, SkipBack, SkipForward, Volume2 } from "lucide-react";
 import Link from "next/link";
 import LikeButton from "./like-button.component";
+import QueueManager from "./queue-manager";
 
 export default function PersistentPlayer() {
   const {
@@ -18,7 +19,7 @@ export default function PersistentPlayer() {
     playlist,
   } = usePlayer();
 
-  console.log(currentTrack);
+  // console.log(currentTrack);
 
   if (!currentTrack) return null;
 
@@ -99,6 +100,11 @@ export default function PersistentPlayer() {
                 {currentTrackIndex + 1}/{playlist.length}
               </div>
             )}
+
+            {/* Queue Manager Button */}
+            <div className="ml-3">
+              <QueueManager />
+            </div>
           </div>
 
           {/* Link to player page */}

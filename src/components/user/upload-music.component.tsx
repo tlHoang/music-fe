@@ -52,7 +52,7 @@ const UploadMusic = () => {
 
       const data: UploadMusicResponse = await response.json();
       setMessage("Upload successful!");
-      console.log(data);
+      // console.log(data);
     } catch (error) {
       console.error("Error uploading file:", error);
       setMessage("Upload failed. Please try again.");

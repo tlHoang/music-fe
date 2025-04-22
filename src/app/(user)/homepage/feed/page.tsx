@@ -36,7 +36,7 @@ const FeedPage = () => {
   const [error, setError] = useState<string | null>(null);
   const { playTrack } = usePlayer();
 
-  console.log(tracks);
+  // console.log(tracks);
 
   useEffect(() => {
     if (session?.user?.access_token) {

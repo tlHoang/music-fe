@@ -5,11 +5,11 @@ import { useSession } from "next-auth/react";
 import { sendRequest } from "@/utils/api";
 import MusicPlayer from "@/components/ui/music-player";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
 import Link from "next/link";
 import { usePlayer } from "@/components/app/player-context";
 import LikeButton from "@/components/user/like-button.component";
 import CommentSection from "@/components/user/comment-section.component";
+import TrackCard from "@/components/user/track-card.component";
 
 interface Track {
   _id: string;
@@ -78,16 +78,8 @@ const PlayerPage = () => {
         if (response.data) {
           setTracks(response.data);
 
-          // Initialize the playlist if it's empty and we have tracks
-          if (response.data.length > 0 && playlist.length === 0) {
-            setPlaylist(response.data);
-
-            // If no track is playing, set the first one as current
-            if (!currentTrack) {
-              setCurrentTrackIndex(0);
-              // Note: We don't auto-play here to avoid unexpected sound
-            }
-          }
+          // We're removing the auto-initialization of the playlist
+          // Now tracks will only be loaded to the queue when explicitly selected
         }
       } catch (error) {
         console.error("Error fetching tracks:", error);
@@ -119,34 +111,17 @@ const PlayerPage = () => {
   };
 
   const handleTrackSelect = (index: number) => {
-    // If the playlist has changed, update it
-    if (JSON.stringify(tracks) !== JSON.stringify(playlist)) {
-      setPlaylist(tracks);
-    }
-
-    setCurrentTrackIndex(index);
     const track = tracks[index];
-    track.audioUrl = getFullAudioUrl(track.audioUrl);
-    playTrack(track);
+    const trackWithFullUrl = { ...track };
+    trackWithFullUrl.audioUrl = getFullAudioUrl(track.audioUrl);
+
+    // Instead of replacing the queue with all tracks,
+    // just play this individual track
+    playTrack(trackWithFullUrl);
   };
 
   const handleTrackEnd = () => {
     nextTrack();
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
-  const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.floor(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
   // Handle comment timestamp click to seek to that position in the song
@@ -159,7 +134,8 @@ const PlayerPage = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
-        <p className="text-lg">Loading your tracks...</p>
+        {/* <p className="text-lg">Loading your tracks...</p> */}
+        <p></p>
       </div>
     );
   }
@@ -276,32 +252,14 @@ const PlayerPage = () => {
                 {tracks.map((track, index) => (
                   <li
                     key={track._id}
-                    className={`px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer ${
+                    className={
                       currentTrack?._id === track._id
                         ? "bg-blue-50 dark:bg-blue-900/20"
                         : ""
-                    }`}
-                    onClick={() => handleTrackSelect(index)}
+                    }
                   >
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded-full mr-3 flex items-center justify-center">
-                        {currentTrack?._id === track._id ? (
-                          isPlaying ? (
-                            <Pause size={12} />
-                          ) : (
-                            <Play size={12} className="ml-0.5" />
-                          )
-                        ) : (
-                          <span className="text-sm">{index + 1}</span>
-                        )}
-                      </div>
-                      <div className="flex-grow min-w-0">
-                        <p className="font-medium truncate">{track.title}</p>
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>{formatDuration(track.duration)}</span>
-                          <span>{formatDate(track.uploadDate)}</span>
-                        </div>
-                      </div>
+                    <div onClick={() => handleTrackSelect(index)}>
+                      <TrackCard track={track} isCompact={true} index={index} />
                     </div>
                   </li>
                 ))}
@@ -309,10 +267,13 @@ const PlayerPage = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mt-6">
+          {/* <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mt-6">
             <h3 className="text-lg font-semibold mb-3">How to Use</h3>
             <ul className="space-y-2 text-sm">
               <li>• Click on any track in the playlist to start playing it</li>
+              <li>
+                • Use the menu (⋯) to add tracks to your queue or play next
+              </li>
               <li>• Use the playback controls to navigate between tracks</li>
               <li>• Like tracks or add comments with timestamps</li>
               <li>
@@ -325,8 +286,11 @@ const PlayerPage = () => {
               <li>
                 • Use the mini player at the bottom to control playback anywhere
               </li>
+              <li>
+                • Open the Queue Manager to view and reorder your play queue
+              </li>
             </ul>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

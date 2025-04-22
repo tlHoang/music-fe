@@ -34,6 +34,14 @@ interface PlayerContextType {
   audioElement: HTMLAudioElement | null;
   isSeeking: boolean;
   setIsSeeking: (isSeeking: boolean) => void;
+  // New queue management methods
+  addToQueue: (track: Track) => void;
+  addNextToQueue: (track: Track) => void;
+  removeFromQueue: (index: number) => void;
+  clearQueue: () => void;
+  shuffleQueue: () => void;
+  isShuffle: boolean;
+  toggleShuffle: () => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -42,8 +50,10 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playlist, setPlaylist] = useState<Track[]>([]);
+  const [originalPlaylist, setOriginalPlaylist] = useState<Track[]>([]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
   const [isSeeking, setIsSeeking] = useState(false);
+  const [isShuffle, setIsShuffle] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const currentAudioUrlRef = useRef<string | null>(null);
@@ -202,6 +212,54 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     }
   }, [isPlaying]);
 
+  // Apply shuffle state when it changes
+  useEffect(() => {
+    if (isShuffle) {
+      if (playlist.length > 1) {
+        // Save the original playlist order
+        setOriginalPlaylist([...playlist]);
+
+        // Get current track to keep it in place
+        const currentTrack = playlist[currentTrackIndex];
+
+        // Shuffle the rest of the tracks
+        const remainingTracks = playlist.filter(
+          (_, i) => i !== currentTrackIndex
+        );
+        shuffleArray(remainingTracks);
+
+        // Put the current track back at the current index
+        const newPlaylist = [...remainingTracks];
+        newPlaylist.splice(currentTrackIndex, 0, currentTrack);
+
+        setPlaylist(newPlaylist);
+      }
+    } else {
+      // Restore original playlist if it exists and has items
+      if (originalPlaylist.length > 0) {
+        // Find the current track in the original playlist
+        const currentTrack = playlist[currentTrackIndex];
+        const originalIndex = originalPlaylist.findIndex(
+          (track) => track._id === currentTrack._id
+        );
+
+        setPlaylist(originalPlaylist);
+        // Update current track index to match its position in the original playlist
+        if (originalIndex !== -1) {
+          setCurrentTrackIndex(originalIndex);
+        }
+      }
+    }
+  }, [isShuffle]);
+
+  const shuffleArray = (array: any[]) => {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  };
+
   const handleTrackEnded = () => {
     nextTrack();
   };
@@ -253,6 +311,137 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Add a track to the end of the queue
+  const addToQueue = (track: Track) => {
+    const newPlaylist = [...playlist, track];
+    setPlaylist(newPlaylist);
+
+    // If this is the first track, set it as current
+    if (playlist.length === 0) {
+      setCurrentTrackIndex(0);
+      setCurrentTrack(track);
+    }
+
+    // Also update original playlist for shuffle state
+    if (!isShuffle) {
+      setOriginalPlaylist(newPlaylist);
+    } else if (originalPlaylist.length > 0) {
+      setOriginalPlaylist([...originalPlaylist, track]);
+    }
+  };
+
+  // Add a track to play next (right after the current track)
+  const addNextToQueue = (track: Track) => {
+    const newPlaylist = [...playlist];
+    newPlaylist.splice(currentTrackIndex + 1, 0, track);
+    setPlaylist(newPlaylist);
+
+    // Also update original playlist for shuffle state
+    if (!isShuffle) {
+      setOriginalPlaylist(newPlaylist);
+    } else if (originalPlaylist.length > 0) {
+      // Try to insert at a similar relative position in original
+      const currentTrackInOriginal = originalPlaylist.findIndex(
+        (t) => t._id === playlist[currentTrackIndex]._id
+      );
+
+      if (currentTrackInOriginal !== -1) {
+        const newOriginal = [...originalPlaylist];
+        newOriginal.splice(currentTrackInOriginal + 1, 0, track);
+        setOriginalPlaylist(newOriginal);
+      } else {
+        // Fallback if we can't find the current track
+        setOriginalPlaylist([...originalPlaylist, track]);
+      }
+    }
+  };
+
+  // Remove a track from the queue
+  const removeFromQueue = (index: number) => {
+    if (index < 0 || index >= playlist.length) return;
+
+    const trackToRemove = playlist[index];
+    const newPlaylist = playlist.filter((_, i) => i !== index);
+
+    // Update current track index if needed
+    let newIndex = currentTrackIndex;
+
+    if (index === currentTrackIndex) {
+      // We're removing the current track
+      if (newPlaylist.length === 0) {
+        // Queue is now empty
+        setCurrentTrack(null);
+        setIsPlaying(false);
+        newIndex = 0;
+      } else if (index >= newPlaylist.length) {
+        // We removed the last track, go to the new last track
+        newIndex = newPlaylist.length - 1;
+        setCurrentTrack(newPlaylist[newIndex]);
+      } else {
+        // Keep the same index and play the next track
+        setCurrentTrack(newPlaylist[index]);
+      }
+    } else if (index < currentTrackIndex) {
+      // We removed a track that was before the current one
+      newIndex = currentTrackIndex - 1;
+    }
+
+    setPlaylist(newPlaylist);
+    setCurrentTrackIndex(newIndex);
+
+    // Update original playlist if needed
+    if (!isShuffle) {
+      setOriginalPlaylist(newPlaylist);
+    } else if (originalPlaylist.length > 0) {
+      // Find and remove the track from the original playlist
+      const newOriginal = originalPlaylist.filter(
+        (t) => t._id !== trackToRemove._id
+      );
+      setOriginalPlaylist(newOriginal);
+    }
+  };
+
+  // Clear the queue
+  const clearQueue = () => {
+    setPlaylist([]);
+    setOriginalPlaylist([]);
+    setCurrentTrackIndex(0);
+    setCurrentTrack(null);
+    setIsPlaying(false);
+  };
+
+  // Shuffle the queue
+  const shuffleQueue = () => {
+    if (playlist.length <= 1) return;
+
+    // Save the original playlist order if not already in shuffle mode
+    if (!isShuffle) {
+      setOriginalPlaylist([...playlist]);
+    }
+
+    // Get current track
+    const currentTrack = playlist[currentTrackIndex];
+
+    // Create a new array with all tracks except current
+    const remainingTracks = playlist.filter((_, i) => i !== currentTrackIndex);
+
+    // Shuffle the remaining tracks
+    shuffleArray(remainingTracks);
+
+    // Create the new playlist with current track at index 0
+    const newPlaylist = [currentTrack, ...remainingTracks];
+
+    // Update state
+    setPlaylist(newPlaylist);
+    setCurrentTrackIndex(0);
+    setIsShuffle(true);
+  };
+
+  // Toggle shuffle mode
+  const toggleShuffle = () => {
+    setIsShuffle(!isShuffle);
+  };
+
   return (
     <PlayerContext.Provider
       value={{
@@ -270,6 +459,13 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
         audioElement: audioRef.current,
         isSeeking,
         setIsSeeking,
+        addToQueue,
+        addNextToQueue,
+        removeFromQueue,
+        clearQueue,
+        shuffleQueue,
+        isShuffle,
+        toggleShuffle,
       }}
     >
       {children}
