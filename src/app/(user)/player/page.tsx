@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Play, Pause, SkipBack, SkipForward } from "lucide-react";
 import Link from "next/link";
 import { usePlayer } from "@/components/app/player-context";
+import LikeButton from "@/components/user/like-button.component";
+import CommentSection from "@/components/user/comment-section.component";
 
 interface Track {
   _id: string;
@@ -25,6 +27,7 @@ const PlayerPage = () => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPlayerTime, setCurrentPlayerTime] = useState<number>(0);
 
   // Get player context
   const {
@@ -39,7 +42,23 @@ const PlayerPage = () => {
     setPlaylist,
     currentTrackIndex,
     setCurrentTrackIndex,
+    audioElement,
   } = usePlayer();
+
+  // Update current time from audio element for timestamps in comments
+  useEffect(() => {
+    if (!audioElement) return;
+
+    const updateCurrentTime = () => {
+      setCurrentPlayerTime(audioElement.currentTime);
+    };
+
+    audioElement.addEventListener("timeupdate", updateCurrentTime);
+
+    return () => {
+      audioElement.removeEventListener("timeupdate", updateCurrentTime);
+    };
+  }, [audioElement]);
 
   useEffect(() => {
     const fetchTracks = async () => {
@@ -130,6 +149,13 @@ const PlayerPage = () => {
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
   };
 
+  // Handle comment timestamp click to seek to that position in the song
+  const handleCommentTimestampClick = (time: number) => {
+    if (audioElement) {
+      audioElement.currentTime = time;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
@@ -192,31 +218,50 @@ const PlayerPage = () => {
             )}
 
             {currentDisplayTrack && (
-              <MusicPlayer
-                audioUrl={getFullAudioUrl(currentDisplayTrack.audioUrl)}
-                title={currentDisplayTrack.title}
-                onEnded={handleTrackEnd}
-                onPrevious={previousTrack}
-                onNext={nextTrack}
-                onPlayStateChange={(isPlaying) => {
-                  if (isPlaying) {
-                    playTrack(currentDisplayTrack);
-                  } else {
-                    pauseTrack();
-                  }
-                }}
-                autoPlay={isPlaying}
-              />
+              <div className="space-y-4">
+                <MusicPlayer
+                  audioUrl={getFullAudioUrl(currentDisplayTrack.audioUrl)}
+                  title={currentDisplayTrack.title}
+                  onEnded={handleTrackEnd}
+                  onPrevious={previousTrack}
+                  onNext={nextTrack}
+                  onPlayStateChange={(isPlaying) => {
+                    if (isPlaying) {
+                      playTrack(currentDisplayTrack);
+                    } else {
+                      pauseTrack();
+                    }
+                  }}
+                  autoPlay={isPlaying}
+                />
+
+                {/* Like button for the current track */}
+                <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center">
+                    <LikeButton
+                      songId={currentDisplayTrack._id}
+                      size="md"
+                      showCount={true}
+                    />
+                  </div>
+
+                  <div className="text-sm text-gray-500">
+                    Track {displayIndex + 1} of {tracks.length}
+                  </div>
+                </div>
+              </div>
             )}
 
-            {/* Track navigation info */}
-            <div className="flex justify-center items-center space-x-4 mt-6">
-              <div className="text-sm text-center">
-                <span className="font-medium">
-                  Track {displayIndex + 1} of {tracks.length}
-                </span>
+            {/* Comments section */}
+            {currentDisplayTrack && (
+              <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <CommentSection
+                  songId={currentDisplayTrack._id}
+                  currentTime={currentPlayerTime}
+                  onCommentTimestampClick={handleCommentTimestampClick}
+                />
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -269,6 +314,10 @@ const PlayerPage = () => {
             <ul className="space-y-2 text-sm">
               <li>• Click on any track in the playlist to start playing it</li>
               <li>• Use the playback controls to navigate between tracks</li>
+              <li>• Like tracks or add comments with timestamps</li>
+              <li>
+                • Click on comment timestamps to jump to that part of the song
+              </li>
               <li>
                 • Your playback will continue even when you navigate to other
                 pages

@@ -14,18 +14,31 @@ const UserHeader = () => {
         <Link href="/homepage">Music Platform</Link>
       </div>
 
-      {/* Search Bar */}
-      {/* <div className="flex items-center space-x-2">
-        <Input placeholder="Search for music..." className="w-64" />
-        <Button>Search</Button>
-      </div> */}
+      {/* Navigation Links */}
+      <div className="hidden md:flex items-center space-x-6">
+        <Link href="/homepage/feed" className="hover:text-blue-600 font-medium">
+          Feed
+        </Link>
+        <Link href="/discover" className="hover:text-blue-600 font-medium">
+          Discover
+        </Link>
+        <Link href="/player" className="hover:text-blue-600 font-medium">
+          Player
+        </Link>
+        <Link href="/upload" className="hover:text-blue-600 font-medium">
+          Upload
+        </Link>
+      </div>
 
       {/* User Actions */}
       <div className="flex items-center space-x-4">
-        <Link href="/player" className="hover:text-blue-600">
-          Player
+        <Link href="/profile/my-music" className="hover:text-blue-600">
+          My Music
         </Link>
-        <Link href="/profile" className="hover:text-blue-600">
+        <Link
+          href={`/profile/${process.env.NEXT_PUBLIC_USER_ID || ""}`}
+          className="hover:text-blue-600"
+        >
           Profile
         </Link>
         <button

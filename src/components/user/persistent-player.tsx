@@ -5,6 +5,7 @@ import { usePlayer } from "@/components/app/player-context";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, SkipBack, SkipForward, Volume2 } from "lucide-react";
 import Link from "next/link";
+import LikeButton from "./like-button.component";
 
 export default function PersistentPlayer() {
   const {
@@ -16,6 +17,8 @@ export default function PersistentPlayer() {
     currentTrackIndex,
     playlist,
   } = usePlayer();
+
+  console.log(currentTrack);
 
   if (!currentTrack) return null;
 
@@ -46,6 +49,17 @@ export default function PersistentPlayer() {
                 {currentTrack.artist || "Unknown Artist"}
               </div>
             </div>
+
+            {/* Like button */}
+            {currentTrack._id && (
+              <div className="ml-2">
+                <LikeButton
+                  songId={currentTrack._id}
+                  size="sm"
+                  showCount={false}
+                />
+              </div>
+            )}
           </div>
 
           {/* Player controls */}
