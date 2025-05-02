@@ -28,6 +28,7 @@ interface MusicPlayerProps {
   onNext?: () => void;
   autoPlay?: boolean;
   className?: string;
+  isPlaying?: boolean;
 }
 
 const MusicPlayer = ({
@@ -48,6 +49,7 @@ const MusicPlayer = ({
     togglePlayPause,
     audioElement,
     setIsSeeking,
+    playWithSeek,
   } = usePlayer();
 
   // Local player state
@@ -121,6 +123,7 @@ const MusicPlayer = ({
   // Handle seek change (dragging the slider)
   const handleSeekChange = (value: number[]) => {
     const seekTime = value[0];
+    console.log(1);
     setSliderValue(seekTime);
     setCurrentTime(seekTime); // Update current time immediately for better UX
   };
@@ -132,7 +135,9 @@ const MusicPlayer = ({
     try {
       // Apply the seek time to the audio element
       if (!isNaN(sliderValue) && isFinite(sliderValue) && sliderValue >= 0) {
-        audioElement.currentTime = sliderValue;
+        // audioElement.currentTime = sliderValue;
+        // console.log(1);
+        playWithSeek(audioElement, sliderValue);
         // No need to set current time here as it will be updated by the timeupdate event
       }
     } catch (error) {
@@ -140,7 +145,8 @@ const MusicPlayer = ({
     } finally {
       setIsDragging(false);
       // Small delay to prevent race conditions with the timeupdate event
-      setTimeout(() => setIsSeeking(false), 50);
+      // setTimeout(() => setIsSeeking(false), 50);
+      setIsSeeking(false);
     }
   };
 
@@ -161,11 +167,16 @@ const MusicPlayer = ({
   // Initialize and sync with audio element
   useEffect(() => {
     if (!audioElement) return;
+    // console.log("run");
 
     // Initial setup
-    setCurrentTime(audioElement.currentTime || 0);
     setDuration(audioElement.duration || 0);
-    setSliderValue(audioElement.currentTime || 0);
+
+    if (!globalIsPlaying) {
+      setCurrentTime(audioElement.currentTime || 0);
+      setSliderValue(audioElement.currentTime || 0);
+    }
+
     setVolume(audioElement.volume);
     setIsMuted(audioElement.muted);
     setIsRepeat(audioElement.loop);
@@ -181,6 +192,7 @@ const MusicPlayer = ({
       if (!isDragging) {
         const newTime = audioElement.currentTime;
         setCurrentTime(newTime);
+        console.log(2);
         setSliderValue(newTime);
       }
     };
@@ -189,6 +201,7 @@ const MusicPlayer = ({
       // When a seek operation completes, ensure UI is updated
       const newTime = audioElement.currentTime;
       setCurrentTime(newTime);
+      console.log(3);
       setSliderValue(newTime);
     };
 
@@ -257,11 +270,21 @@ const MusicPlayer = ({
         setSliderValue(value);
 
         // Then update actual audio time
-        audioElement.currentTime = value;
+        try {
+          audioElement.currentTime = value;
+
+          // If we're playing, ensure playback continues
+          if (globalIsPlaying && audioElement.paused) {
+            audioElement
+              .play()
+              .catch((e) => console.error("Error resuming playback:", e));
+          }
+        } catch (err) {
+          console.error("Error setting time directly:", err);
+        }
       }
 
-      // Reset seeking state after setting the time position with a small delay
-      // to avoid race conditions with the timeupdate event
+      // Reset seeking state after a small delay
       setTimeout(() => setIsSeeking(false), 50);
     };
 
@@ -270,7 +293,7 @@ const MusicPlayer = ({
     return () => {
       sliderTrack.removeEventListener("click", handleSliderTrackClick);
     };
-  }, [audioElement, duration, setIsSeeking]);
+  }, [audioElement, duration, globalIsPlaying, setIsSeeking]);
 
   return (
     <div

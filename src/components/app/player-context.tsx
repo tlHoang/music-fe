@@ -42,6 +42,10 @@ interface PlayerContextType {
   shuffleQueue: () => void;
   isShuffle: boolean;
   toggleShuffle: () => void;
+  playWithSeek: (
+    audioElement: HTMLAudioElement,
+    seekTime?: number
+  ) => Promise<void>;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -442,6 +446,36 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     setIsShuffle(!isShuffle);
   };
 
+  const playWithSeek = (
+    audioElement: HTMLAudioElement,
+    seekTime = 0
+  ): Promise<void> => {
+    console.log("playWithSeek called with seekTime:", seekTime);
+    // const isPlaying = isAudioPlaying(audioElement);
+    return new Promise((resolve) => {
+      audioElement.addEventListener(
+        "loadedmetadata",
+        () => {
+          audioElement.currentTime = seekTime;
+        },
+        { once: true }
+      );
+
+      audioElement.addEventListener(
+        "canplaythrough",
+        () => {
+          if (isPlaying) {
+            audioElement.play();
+          }
+          resolve();
+        },
+        { once: true }
+      );
+
+      audioElement.load();
+    });
+  };
+
   return (
     <PlayerContext.Provider
       value={{
@@ -466,6 +500,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
         shuffleQueue,
         isShuffle,
         toggleShuffle,
+        playWithSeek,
       }}
     >
       {children}

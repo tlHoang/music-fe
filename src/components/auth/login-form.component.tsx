@@ -29,7 +29,7 @@ const LoginForm = (props: IProps) => {
         }
       } else {
         toast.success("Login successful");
-        router.push("/");
+        router.push("/homepage");
       }
     } catch (error) {
       console.error("An unexpected error occurred:", error);
