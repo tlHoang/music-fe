@@ -295,6 +295,37 @@ const MusicPlayer = ({
     };
   }, [audioElement, duration, globalIsPlaying, setIsSeeking]);
 
+  // Fetch track play count and related data from backend
+  const fetchTrackData = async (trackId: string) => {
+    if (!trackId) return;
+
+    try {
+      // Get token from session storage or context
+      const token =
+        localStorage.getItem("auth_token") ||
+        sessionStorage.getItem("auth_token");
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/songs/${trackId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: token ? `Bearer ${token}` : "",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      }
+    } catch (error) {
+      console.error("Error fetching track data:", error);
+    }
+    return null;
+  };
+
   return (
     <div
       className={cn(

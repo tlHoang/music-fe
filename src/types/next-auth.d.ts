@@ -5,7 +5,16 @@ interface IUser {
   _id: string;
   email: string;
   username: string;
+  role?: string;
   access_token: string;
+  name?: string;
+  profilePicture?: string;
+  bio?: string;
+  songs?: any[]; // Array of song references
+  playlists?: any[]; // Array of playlist references
+  isActive?: boolean;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 declare module "next-auth/jwt" {
@@ -36,10 +45,21 @@ declare module "next-auth" {
    * Returned by `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
    */
   interface Session {
-    _id: string;
-    email: string;
-    username: string;
-    access_token: string;
+    user: {
+      _id: string;
+      email: string;
+      username: string;
+      role: string;
+      access_token: string;
+      name?: string;
+      profilePicture?: string;
+      bio?: string;
+      songs?: any[]; // Array of song references
+      playlists?: any[]; // Array of playlist references
+      isActive?: boolean;
+      createdAt?: string | Date;
+      updatedAt?: string | Date;
+    };
     refresh_token: string;
     access_expire: number;
     error: string;

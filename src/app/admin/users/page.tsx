@@ -18,12 +18,13 @@ import { toast } from "sonner";
 
 interface User {
   _id: string;
-  name: string;
+  name?: string;
+  username?: string; // Adding username as MongoDB users often have username instead of name
   email: string;
   role: string;
-  status: string;
+  status?: string;
   profilePicture?: string;
-  createdAt: string;
+  createdAt?: string;
   bio?: string;
   followerCount?: number;
   followingCount?: number;
@@ -31,6 +32,9 @@ interface User {
   playlistCount?: number;
   lastActive?: string;
   isVerified?: boolean;
+  isActive?: boolean; // Adding isActive which might be used instead of status
+  songs?: any[]; // Array of song references
+  playlists?: any[]; // Array of playlist references
 }
 
 const UsersPage = () => {
@@ -49,6 +53,8 @@ const UsersPage = () => {
 
       try {
         setIsLoading(true);
+        console.log("Fetching users with token:", session.user.access_token);
+
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/users/all`,
           {
@@ -58,13 +64,64 @@ const UsersPage = () => {
           }
         );
 
+        console.log("Response status:", response.status);
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data = await response.json();
-        if (data.data) {
-          setUsers(data.data);
+        const responseData = await response.json();
+        console.log(
+          "Raw API Response Data:",
+          JSON.stringify(responseData, null, 2)
+        );
+
+        // Try different data structures
+        if (
+          responseData &&
+          responseData.data &&
+          Array.isArray(responseData.data)
+        ) {
+          console.log(
+            "Setting users from responseData.data array, found",
+            responseData.data.length,
+            "users"
+          );
+          setUsers(responseData.data);
+        } else if (
+          responseData &&
+          responseData.data &&
+          responseData.data.data &&
+          Array.isArray(responseData.data.data)
+        ) {
+          console.log(
+            "Setting users from nested responseData.data.data array, found",
+            responseData.data.data.length,
+            "users"
+          );
+          setUsers(responseData.data.data);
+        } else if (responseData && Array.isArray(responseData)) {
+          console.log(
+            "Setting users from direct responseData array, found",
+            responseData.length,
+            "users"
+          );
+          setUsers(responseData);
+        } else if (
+          responseData &&
+          responseData.success &&
+          responseData.data &&
+          Array.isArray(responseData.data)
+        ) {
+          console.log(
+            "Setting users from success.data structure, found",
+            responseData.data.length,
+            "users"
+          );
+          setUsers(responseData.data);
+        } else {
+          console.error("Unexpected data structure:", responseData);
+          toast.error("Invalid data format received from server");
         }
       } catch (error) {
         console.error("Error fetching users:", error);
@@ -79,24 +136,50 @@ const UsersPage = () => {
 
   // Filter users based on search and filters
   useEffect(() => {
+    console.log("Users array length:", users.length);
+    console.log("Users array data:", users);
+
     if (users.length > 0) {
       const filtered = users.filter((user) => {
+        // Skip entries that aren't objects or don't have an ID
+        if (!user || typeof user !== "object" || !user._id) {
+          console.log("Skipping invalid user entry:", user);
+          return false;
+        }
+
+        // Handle different field naming conventions
+        const displayName = user.name || user.username || "";
+        const userEmail = user.email || "";
+        const userRole = user.role || "";
+
+        // Search matching
         const matchesSearch =
-          user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          user.email.toLowerCase().includes(searchQuery.toLowerCase());
+          searchQuery === "" ||
+          displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          userEmail.toLowerCase().includes(searchQuery.toLowerCase());
 
-        const matchesStatus =
-          statusFilter === "all" ||
-          (statusFilter === "active" && user.status === "ACTIVE") ||
-          (statusFilter === "suspended" && user.status === "SUSPENDED") ||
-          (statusFilter === "unverified" && user.isVerified === false);
+        // Status matching - handle both status field and isActive field
+        let matchesStatus = true;
+        if (statusFilter !== "all") {
+          if (statusFilter === "active") {
+            matchesStatus = user.status === "ACTIVE" || user.isActive === true;
+          } else if (statusFilter === "suspended") {
+            matchesStatus =
+              user.status === "SUSPENDED" || user.isActive === false;
+          } else if (statusFilter === "unverified") {
+            matchesStatus = user.isVerified === false;
+          }
+        }
 
+        // Role matching
         const matchesRole =
           roleFilter === "all" ||
-          user.role.toLowerCase() === roleFilter.toLowerCase();
+          userRole.toLowerCase() === roleFilter.toLowerCase();
 
         return matchesSearch && matchesStatus && matchesRole;
       });
+
+      console.log("Filtered users count:", filtered.length);
       setFilteredUsers(filtered);
     }
   }, [users, searchQuery, statusFilter, roleFilter]);
@@ -332,15 +415,16 @@ const UsersPage = () => {
                               src={
                                 user.profilePicture || getDefaultProfileImage()
                               }
-                              alt={user.name}
+                              alt={user.name || user.username || ""}
                             />
                           </Avatar>
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {user.name}
+                            {user.name || user.username || "Unnamed User"}
                           </div>
-                          {!user.isVerified && (
+                          {(user.isVerified === false ||
+                            user.isActive === false) && (
                             <div className="text-xs text-amber-600">
                               Unverified
                             </div>
@@ -349,30 +433,36 @@ const UsersPage = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {user.email}
+                      {user.email || "No email"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeClass(user.role)}`}
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getRoleBadgeClass(user.role || "USER")}`}
                       >
-                        {user.role}
+                        {user.role || "USER"}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(user.status)}`}
+                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeClass(user.status || (user.isActive ? "ACTIVE" : "SUSPENDED"))}`}
                       >
-                        {user.status}
+                        {user.status ||
+                          (user.isActive ? "ACTIVE" : "SUSPENDED")}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-xs text-gray-900">
-                        <div>{user.trackCount || 0} tracks</div>
-                        <div>{user.playlistCount || 0} playlists</div>
+                        <div>
+                          {user.trackCount || user.songs?.length || 0} tracks
+                        </div>
+                        <div>
+                          {user.playlistCount || user.playlists?.length || 0}{" "}
+                          playlists
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(user.createdAt)}
+                      {user.createdAt ? formatDate(user.createdAt) : "N/A"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <DropdownMenu>
@@ -410,7 +500,7 @@ const UsersPage = () => {
                             Edit User
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          {user.role.toUpperCase() !== "ADMIN" ? (
+                          {(user.role || "").toUpperCase() !== "ADMIN" ? (
                             <DropdownMenuItem
                               onClick={() =>
                                 handleUserAction("promote", user._id)
@@ -429,7 +519,7 @@ const UsersPage = () => {
                               Demote to User
                             </DropdownMenuItem>
                           )}
-                          {user.status.toUpperCase() === "ACTIVE" ? (
+                          {(user.status || "").toUpperCase() === "ACTIVE" ? (
                             <DropdownMenuItem
                               onClick={() =>
                                 handleUserAction("suspend", user._id)

@@ -268,6 +268,33 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     nextTrack();
   };
 
+  // Track play count by calling the backend API
+  const trackPlayCount = async (trackId: string) => {
+    if (!trackId) return;
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/songs/${trackId}/plays`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            // Add auth token if needed
+            ...(audioRef.current?.dataset?.token
+              ? { Authorization: `Bearer ${audioRef.current.dataset.token}` }
+              : {}),
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error("Failed to update play count");
+      }
+    } catch (error) {
+      console.error("Error updating play count:", error);
+    }
+  };
+
   const playTrack = (track: Track) => {
     // Check if this is the same track we're already playing
     if (currentTrack && track._id === currentTrack._id) {
@@ -277,6 +304,12 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       // Otherwise, set the new track
       setCurrentTrack(track);
       setIsPlaying(true);
+
+      // Record play count after a short delay to ensure
+      // it was actually played, not just loaded
+      setTimeout(() => {
+        trackPlayCount(track._id);
+      }, 2000);
     }
   };
 
