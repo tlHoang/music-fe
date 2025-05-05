@@ -117,6 +117,7 @@ export default function QueueManager() {
     currentTrackIndex,
     setCurrentTrackIndex,
     playTrack,
+    playTrackInQueue,
     isPlaying,
   } = usePlayer();
 
@@ -170,10 +171,8 @@ export default function QueueManager() {
 
   // Play track at specific index
   const playTrackAtIndex = (index: number) => {
-    setCurrentTrackIndex(index);
-    if (playlist[index]) {
-      playTrack(playlist[index]);
-    }
+    // Use the new playTrackInQueue function that won't reset the queue
+    playTrackInQueue(index);
   };
 
   // Remove track from queue
@@ -219,7 +218,7 @@ export default function QueueManager() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
+          <DialogTitle className="flex items-center justify-between mt-5">
             <span>Play Queue ({playlist.length})</span>
             {playlist.length > 0 && (
               <Button

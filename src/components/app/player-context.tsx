@@ -46,6 +46,8 @@ interface PlayerContextType {
     audioElement: HTMLAudioElement,
     seekTime?: number
   ) => Promise<void>;
+  // New method to play a track that's already in the queue
+  playTrackInQueue: (index: number) => void;
 }
 
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
@@ -268,6 +270,29 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     nextTrack();
   };
 
+  // useEffect to handle track end event
+  useEffect(() => {
+    if (audioRef.current) {
+      const handleEnded = () => {
+        console.log("Track ended, playing next track");
+        nextTrack();
+      };
+
+      // Remove any existing ended event listeners first
+      audioRef.current.removeEventListener("ended", handleTrackEnded);
+
+      // Add the event listener
+      audioRef.current.addEventListener("ended", handleEnded);
+
+      // Return cleanup function
+      return () => {
+        if (audioRef.current) {
+          audioRef.current.removeEventListener("ended", handleEnded);
+        }
+      };
+    }
+  }, [playlist, currentTrackIndex]); // Re-attach when playlist or current index changes
+
   // Track play count by calling the backend API
   const trackPlayCount = async (trackId: string) => {
     if (!trackId) return;
@@ -300,17 +325,24 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     if (currentTrack && track._id === currentTrack._id) {
       // If it's the same track, just toggle play state
       setIsPlaying(true);
-    } else {
-      // Otherwise, set the new track
-      setCurrentTrack(track);
-      setIsPlaying(true);
-
-      // Record play count after a short delay to ensure
-      // it was actually played, not just loaded
-      setTimeout(() => {
-        trackPlayCount(track._id);
-      }, 2000);
+      return;
     }
+
+    // Reset the queue when directly playing a track from outside
+    // This is different from SoundCloud behavior but matches user expectation
+    setPlaylist([track]);
+    setCurrentTrackIndex(0);
+    setCurrentTrack(track);
+    setIsPlaying(true);
+
+    // Update original playlist for shuffle state
+    setOriginalPlaylist([track]);
+
+    // Record play count after a short delay to ensure
+    // it was actually played, not just loaded
+    setTimeout(() => {
+      trackPlayCount(track._id);
+    }, 2000);
   };
 
   const pauseTrack = () => {
@@ -350,45 +382,81 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Add a track to the end of the queue
   const addToQueue = (track: Track) => {
-    const newPlaylist = [...playlist, track];
-    setPlaylist(newPlaylist);
-
-    // If this is the first track, set it as current
-    if (playlist.length === 0) {
+    // For SoundCloud-like behavior:
+    // If we have a currentTrack and queue is empty, add current track to queue first
+    if (currentTrack && playlist.length === 0) {
+      // First add current track, then the new track
+      const newPlaylist = [currentTrack, track];
+      setPlaylist(newPlaylist);
+      // Keep current track as active (index 0)
       setCurrentTrackIndex(0);
-      setCurrentTrack(track);
-    }
 
-    // Also update original playlist for shuffle state
-    if (!isShuffle) {
-      setOriginalPlaylist(newPlaylist);
-    } else if (originalPlaylist.length > 0) {
-      setOriginalPlaylist([...originalPlaylist, track]);
+      // Also update original playlist for shuffle state
+      if (!isShuffle) {
+        setOriginalPlaylist(newPlaylist);
+      } else if (originalPlaylist.length > 0) {
+        setOriginalPlaylist([...originalPlaylist, track]);
+      }
+    } else {
+      // Standard behavior: add to end of existing queue
+      const newPlaylist = [...playlist, track];
+      setPlaylist(newPlaylist);
+
+      // If this is the first track, set it as current
+      if (playlist.length === 0) {
+        setCurrentTrackIndex(0);
+        setCurrentTrack(track);
+      }
+
+      // Also update original playlist for shuffle state
+      if (!isShuffle) {
+        setOriginalPlaylist(newPlaylist);
+      } else if (originalPlaylist.length > 0) {
+        setOriginalPlaylist([...originalPlaylist, track]);
+      }
     }
   };
 
   // Add a track to play next (right after the current track)
   const addNextToQueue = (track: Track) => {
-    const newPlaylist = [...playlist];
-    newPlaylist.splice(currentTrackIndex + 1, 0, track);
-    setPlaylist(newPlaylist);
+    // For SoundCloud-like behavior:
+    // If we have a currentTrack and queue is empty, add current track to queue first
+    if (currentTrack && playlist.length === 0) {
+      // Add current track to queue, then add new track next
+      const newPlaylist = [currentTrack, track];
+      setPlaylist(newPlaylist);
+      // Keep current track as active (index 0)
+      setCurrentTrackIndex(0);
 
-    // Also update original playlist for shuffle state
-    if (!isShuffle) {
-      setOriginalPlaylist(newPlaylist);
-    } else if (originalPlaylist.length > 0) {
-      // Try to insert at a similar relative position in original
-      const currentTrackInOriginal = originalPlaylist.findIndex(
-        (t) => t._id === playlist[currentTrackIndex]._id
-      );
-
-      if (currentTrackInOriginal !== -1) {
-        const newOriginal = [...originalPlaylist];
-        newOriginal.splice(currentTrackInOriginal + 1, 0, track);
-        setOriginalPlaylist(newOriginal);
-      } else {
-        // Fallback if we can't find the current track
+      // Also update original playlist for shuffle state
+      if (!isShuffle) {
+        setOriginalPlaylist(newPlaylist);
+      } else if (originalPlaylist.length > 0) {
         setOriginalPlaylist([...originalPlaylist, track]);
+      }
+    } else {
+      // Standard behavior: insert after current track
+      const newPlaylist = [...playlist];
+      newPlaylist.splice(currentTrackIndex + 1, 0, track);
+      setPlaylist(newPlaylist);
+
+      // Also update original playlist for shuffle state
+      if (!isShuffle) {
+        setOriginalPlaylist(newPlaylist);
+      } else if (originalPlaylist.length > 0) {
+        // Try to insert at a similar relative position in original
+        const currentTrackInOriginal = originalPlaylist.findIndex(
+          (t) => t._id === playlist[currentTrackIndex]._id
+        );
+
+        if (currentTrackInOriginal !== -1) {
+          const newOriginal = [...originalPlaylist];
+          newOriginal.splice(currentTrackInOriginal + 1, 0, track);
+          setOriginalPlaylist(newOriginal);
+        } else {
+          // Fallback if we can't find the current track
+          setOriginalPlaylist([...originalPlaylist, track]);
+        }
       }
     }
   };
@@ -509,6 +577,25 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     });
   };
 
+  // Play a track that's already in the queue without resetting the queue
+  const playTrackInQueue = (index: number) => {
+    if (index >= 0 && index < playlist.length) {
+      // Reset playback operation tracking before changing tracks
+      playbackOperationRef.current = null;
+
+      setCurrentTrackIndex(index);
+      setCurrentTrack(playlist[index]);
+      setIsPlaying(true);
+
+      // Record play count after a short delay
+      setTimeout(() => {
+        if (playlist[index]?._id) {
+          trackPlayCount(playlist[index]._id);
+        }
+      }, 2000);
+    }
+  };
+
   return (
     <PlayerContext.Provider
       value={{
@@ -534,6 +621,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
         isShuffle,
         toggleShuffle,
         playWithSeek,
+        playTrackInQueue,
       }}
     >
       {children}

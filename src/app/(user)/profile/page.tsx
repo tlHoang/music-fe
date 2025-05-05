@@ -237,7 +237,7 @@ const UserProfilePage = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[70vh]">
-        <p className="text-xl">Loading profile...</p>
+        {/* <p className="text-xl"></p> */}
       </div>
     );
   }

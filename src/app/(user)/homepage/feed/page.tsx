@@ -101,7 +101,8 @@ const FeedPage = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[70vh]">
-        <p className="text-xl">Loading your feed...</p>
+        {/* <p className="text-xl">Loading your feed...</p> */}
+        <p className="text-xl"></p>
       </div>
     );
   }

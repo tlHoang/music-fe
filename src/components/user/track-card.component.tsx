@@ -34,6 +34,7 @@ export interface TrackCardProps {
   showLikeButton?: boolean;
   className?: string;
   index?: number;
+  onMainClick?: () => void; // New prop for handling main card click
 }
 
 const TrackCard = ({
@@ -42,6 +43,7 @@ const TrackCard = ({
   showLikeButton = true,
   className,
   index,
+  onMainClick,
 }: TrackCardProps) => {
   const {
     currentTrack,
@@ -72,7 +74,9 @@ const TrackCard = ({
     }
   };
 
-  const handlePlay = () => {
+  const handlePlay = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent the event from bubbling up
+
     if (isCurrentTrack) {
       togglePlayPause();
     } else {
@@ -82,7 +86,9 @@ const TrackCard = ({
     }
   };
 
-  const handleAddToQueue = () => {
+  const handleAddToQueue = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent the event from bubbling up
+
     const trackWithFullUrl = { ...track };
     trackWithFullUrl.audioUrl = getFullAudioUrl(track.audioUrl);
 
@@ -90,7 +96,9 @@ const TrackCard = ({
     toast.success(`Added "${track.title}" to the end of your queue`);
   };
 
-  const handlePlayNext = () => {
+  const handlePlayNext = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent the event from bubbling up
+
     const trackWithFullUrl = { ...track };
     trackWithFullUrl.audioUrl = getFullAudioUrl(track.audioUrl);
 
@@ -123,6 +131,7 @@ const TrackCard = ({
           "flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 group",
           className
         )}
+        onClick={onMainClick} // Add the onClick handler to the main div
       >
         <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded mr-3 flex-shrink-0 relative group">
           {track.coverImage ? (
@@ -160,7 +169,10 @@ const TrackCard = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-1 ml-2">
+        <div
+          className="flex items-center gap-1 ml-2"
+          onClick={(e) => e.stopPropagation()}
+        >
           {showLikeButton && track._id && (
             <LikeButton songId={track._id} size="sm" showCount={false} />
           )}
@@ -205,6 +217,7 @@ const TrackCard = ({
         "bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden",
         className
       )}
+      onClick={onMainClick} // Add the onClick handler to the main div
     >
       <div className="relative group aspect-square bg-gray-200 dark:bg-gray-700">
         {track.coverImage ? (
@@ -236,34 +249,36 @@ const TrackCard = ({
       <div className="p-4">
         <div className="flex justify-between items-start mb-2">
           <h3 className="font-medium truncate">{track.title}</h3>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 w-7 p-0 -mr-1 -mt-1"
-              >
-                <MoreHorizontal size={16} />
-                <span className="sr-only">More options</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
-              <DropdownMenuItem
-                onClick={handleAddToQueue}
-                className="flex items-center gap-2"
-              >
-                <Plus size={14} />
-                <span>Add to Queue</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={handlePlayNext}
-                className="flex items-center gap-2"
-              >
-                <PlayNext size={14} />
-                <span>Play Next</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 w-7 p-0 -mr-1 -mt-1"
+                >
+                  <MoreHorizontal size={16} />
+                  <span className="sr-only">More options</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem
+                  onClick={handleAddToQueue}
+                  className="flex items-center gap-2"
+                >
+                  <Plus size={14} />
+                  <span>Add to Queue</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handlePlayNext}
+                  className="flex items-center gap-2"
+                >
+                  <PlayNext size={14} />
+                  <span>Play Next</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         <p className="text-sm text-gray-500 dark:text-gray-400 truncate mb-3">
@@ -271,9 +286,11 @@ const TrackCard = ({
         </p>
 
         <div className="flex justify-between items-center">
-          {showLikeButton && track._id && (
-            <LikeButton songId={track._id} size="sm" showCount={true} />
-          )}
+          <div onClick={(e) => e.stopPropagation()}>
+            {showLikeButton && track._id && (
+              <LikeButton songId={track._id} size="sm" showCount={true} />
+            )}
+          </div>
 
           <div className="text-xs text-gray-500">
             {formatDuration(track.duration)}

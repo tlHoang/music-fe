@@ -42,6 +42,7 @@ const PlayerPage = () => {
     setPlaylist,
     currentTrackIndex,
     setCurrentTrackIndex,
+    playWithSeek,
     audioElement,
   } = usePlayer();
 
@@ -127,7 +128,7 @@ const PlayerPage = () => {
   // Handle comment timestamp click to seek to that position in the song
   const handleCommentTimestampClick = (time: number) => {
     if (audioElement) {
-      audioElement.currentTime = time;
+      playWithSeek(audioElement, time);
     }
   };
 
@@ -258,9 +259,13 @@ const PlayerPage = () => {
                         : ""
                     }
                   >
-                    <div onClick={() => handleTrackSelect(index)}>
-                      <TrackCard track={track} isCompact={true} index={index} />
-                    </div>
+                    <TrackCard
+                      track={track}
+                      isCompact={true}
+                      index={index}
+                      className="cursor-pointer"
+                      onMainClick={() => handleTrackSelect(index)}
+                    />
                   </li>
                 ))}
               </ul>

@@ -50,6 +50,9 @@ const MusicPlayer = ({
     audioElement,
     setIsSeeking,
     playWithSeek,
+    isShuffle: globalIsShuffle,
+    toggleShuffle: toggleGlobalShuffle,
+    shuffleQueue,
   } = usePlayer();
 
   // Local player state
@@ -159,10 +162,24 @@ const MusicPlayer = ({
     audioElement.loop = newRepeatState;
   };
 
-  // Toggle shuffle (this would need more implementation for a playlist)
+  // Toggle shuffle (connects to the player context's shuffle functionality)
   const toggleShuffle = () => {
+    // Update local UI state
     setIsShuffle(!isShuffle);
+
+    // Call the player context's toggle shuffle functionality
+    toggleGlobalShuffle();
+
+    // If turning shuffle on, also shuffle the queue immediately
+    if (!isShuffle) {
+      shuffleQueue();
+    }
   };
+
+  // Sync local shuffle state with global state
+  useEffect(() => {
+    setIsShuffle(globalIsShuffle);
+  }, [globalIsShuffle]);
 
   // Initialize and sync with audio element
   useEffect(() => {
