@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface UploadMusicResponse {
   _id: string;
@@ -17,20 +18,91 @@ interface UploadMusicResponse {
   uploadDate: string;
 }
 
+interface Genre {
+  _id: string;
+  name: string;
+  description?: string;
+}
+
 const UploadPage = () => {
   const { data: session } = useSession();
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [visibility, setVisibility] = useState("PUBLIC");
-  const [genre, setGenre] = useState("");
+  const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>([]);
+  const [availableGenres, setAvailableGenres] = useState<Genre[]>([]);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [genresLoading, setGenresLoading] = useState(false);
+
+  const [genreSearchQuery, setGenreSearchQuery] = useState("");
+  const [isGenreDropdownOpen, setIsGenreDropdownOpen] = useState(false);
+
+  const filteredGenres = availableGenres.filter(
+    (genre) =>
+      genre.name.toLowerCase().includes(genreSearchQuery.toLowerCase()) &&
+      !selectedGenreIds.includes(genre._id)
+  );
+
+  // Fetch all available genres when the component mounts
+  useEffect(() => {
+    const fetchGenres = async () => {
+      try {
+        setGenresLoading(true);
+
+        // Get auth token from session
+        const token = session?.user?.access_token;
+        if (!token) {
+          console.warn("No auth token available");
+          return;
+        }
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/genres`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch genres");
+        }
+
+        const result = await response.json();
+        // Extract genres from the data property in the response
+        const genres = result.data || [];
+        console.log("Fetched genres:", genres);
+        setAvailableGenres(Array.isArray(genres) ? genres : []);
+      } catch (error) {
+        console.error("Error fetching genres:", error);
+      } finally {
+        setGenresLoading(false);
+      }
+    };
+
+    // Only fetch genres when session is available
+    if (session) {
+      fetchGenres();
+    }
+  }, [session]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
     }
+  };
+
+  const handleGenreChange = (genreId: string) => {
+    setSelectedGenreIds((prevSelected) => {
+      if (prevSelected.includes(genreId)) {
+        return prevSelected.filter((id) => id !== genreId);
+      } else {
+        return [...prevSelected, genreId];
+      }
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,7 +117,15 @@ const UploadPage = () => {
     formData.append("file", file);
     formData.append("title", title);
     formData.append("visibility", visibility);
-    if (genre) formData.append("genre", genre);
+
+    // Handle genre IDs - now using 'genres' field instead of 'genreIds'
+    if (selectedGenreIds.length > 0) {
+      // Add each genre ID as a separate field with the same name
+      selectedGenreIds.forEach((genreId) => {
+        formData.append("genres", genreId);
+      });
+      console.log("Sending genres:", selectedGenreIds);
+    }
 
     try {
       setLoading(true);
@@ -91,7 +171,7 @@ const UploadPage = () => {
       setMessage("Upload successful!");
       setTitle("");
       setVisibility("PUBLIC");
-      setGenre("");
+      setSelectedGenreIds([]);
       setFile(null);
 
       // Reset file input
@@ -173,16 +253,124 @@ const UploadPage = () => {
               htmlFor="genre"
               className="block text-sm font-medium text-gray-700"
             >
-              Genre (Optional)
+              Genres (Optional)
             </label>
-            <Input
-              id="genre"
-              type="text"
-              value={genre}
-              onChange={(e) => setGenre(e.target.value)}
-              placeholder="e.g. Rock, Electronic, Hip-Hop"
-              className="w-full"
-            />
+            {genresLoading ? (
+              <p className="text-sm text-gray-500">Loading genres...</p>
+            ) : (
+              <div className="space-y-2">
+                {/* Selected genres tags */}
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {selectedGenreIds.length > 0 ? (
+                    selectedGenreIds.map((id) => {
+                      const genre = availableGenres.find((g) => g._id === id);
+                      return genre ? (
+                        <div
+                          key={genre._id}
+                          className="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-md flex items-center text-sm"
+                        >
+                          {genre.name}
+                          <button
+                            type="button"
+                            onClick={() => handleGenreChange(genre._id)}
+                            className="ml-1.5 text-indigo-600 hover:text-indigo-800"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-4 w-4"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      ) : null;
+                    })
+                  ) : (
+                    <div className="text-sm text-gray-500">
+                      No genres selected
+                    </div>
+                  )}
+                </div>
+
+                {/* Search input and dropdown */}
+                <div className="relative">
+                  <Input
+                    id="genre-search"
+                    type="text"
+                    value={genreSearchQuery}
+                    onChange={(e) => {
+                      setGenreSearchQuery(e.target.value);
+                      if (!isGenreDropdownOpen) setIsGenreDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsGenreDropdownOpen(true)}
+                    placeholder="Search and select genres..."
+                    className="w-full pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsGenreDropdownOpen(!isGenreDropdownOpen)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M5.293 7.293a1 1 0 0 1 1.414 0L10 10.586l3.293-3.293a1 1 0 1 1 1.414 1.414l-4 4a1 1 0 0 1-1.414 0l-4-4a1 1 0 0 1 0-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </button>
+
+                  {/* Dropdown for genre selection - moved inside input container for better positioning */}
+                  {isGenreDropdownOpen && (
+                    <div className="absolute left-0 right-0 z-10 mt-1 overflow-auto rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                      {filteredGenres.length > 0 ? (
+                        <ul className="max-h-48 overflow-y-auto">
+                          {filteredGenres.map((genre) => (
+                            <li
+                              key={genre._id}
+                              onClick={() => {
+                                handleGenreChange(genre._id);
+                                setGenreSearchQuery("");
+                              }}
+                              className="cursor-pointer px-4 py-2 text-sm text-gray-700 hover:bg-indigo-50"
+                            >
+                              {genre.name}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div className="px-4 py-2 text-sm text-gray-500">
+                          {genreSearchQuery
+                            ? "No matching genres found"
+                            : "No more genres available"}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Click outside handler */}
+                {isGenreDropdownOpen && (
+                  <div
+                    className="fixed inset-0 z-0"
+                    onClick={() => setIsGenreDropdownOpen(false)}
+                  />
+                )}
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

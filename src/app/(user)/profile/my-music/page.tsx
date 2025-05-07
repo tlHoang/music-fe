@@ -130,23 +130,40 @@ const MyMusicPage = () => {
 
     try {
       setMessage("Deleting...");
-      const response = await sendRequest<any>({
-        url: `${process.env.NEXT_PUBLIC_API_URL}/songs/${currentSong._id}`,
-        headers: {
-          Authorization: `Bearer ${session?.user?.access_token}`,
-        },
-        method: "DELETE",
-      });
+      const response = (
+        await sendRequest<any>({
+          url: `${process.env.NEXT_PUBLIC_API_URL}/songs/${currentSong._id}`,
+          headers: {
+            Authorization: `Bearer ${session?.user?.access_token}`,
+          },
+          method: "DELETE",
+        })
+      ).data;
 
+      console.log(response);
+
+      // First check if we have a success property in the response
       if (response.success) {
         // Remove song from local state
         setSongs(songs.filter((song) => song._id !== currentSong._id));
-        setMessage("Track deleted successfully!");
+        setMessage(`Track "${currentSong.title}" deleted successfully!`);
         setIsDeleteDialogOpen(false);
+
+        // Provide feedback about the Firebase file deletion status
+        if (response.fileDeleted === false) {
+          console.warn(
+            "Note: The audio file could not be removed from storage, but the track was deleted from the database."
+          );
+        }
+      } else {
+        throw new Error(response.message || "Failed to delete track");
       }
     } catch (error) {
       console.error("Error deleting song:", error);
-      setMessage("Failed to delete track. Please try again.");
+      setMessage(
+        `Failed to delete track: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+      // Keep the dialog open so the user can try again
     }
   };
 
