@@ -31,8 +31,9 @@ interface Track {
   userId: string;
   duration: number;
   uploadDate: string;
-  plays?: number;
-  likes?: number;
+  playCount?: number; // Changed from plays to playCount
+  likeCount?: number; // Changed from likes to likeCount
+  commentCount?: number; // Added commentCount
 }
 
 const UserProfilePage = () => {
@@ -418,7 +419,7 @@ const UserProfilePage = () => {
 
                       <div className="ml-4 flex items-center gap-2">
                         <span className="text-sm text-gray-500">
-                          {track.plays || 0} plays
+                          {track.playCount || 0} plays
                         </span>
 
                         {/* Add Like Button with Queue functionality */}

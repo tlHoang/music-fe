@@ -7,6 +7,7 @@ import React, {
   useEffect,
   useRef,
 } from "react";
+import { useSession } from "next-auth/react";
 
 interface Track {
   _id: string;
@@ -53,6 +54,7 @@ interface PlayerContextType {
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
 export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
+  const { data: session } = useSession();
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playlist, setPlaylist] = useState<Track[]>([]);
@@ -298,15 +300,30 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
     if (!trackId) return;
 
     try {
+      // Check if we already tracked this song within the last 30 minutes
+      const trackKey = `track_play_${trackId}`;
+      const lastPlayed = localStorage.getItem(trackKey);
+      const now = Date.now();
+
+      if (lastPlayed) {
+        const timeDiff = now - parseInt(lastPlayed, 10);
+        // Only count as a new play if more than 30 minutes have passed
+        if (timeDiff < 30 * 60 * 1000) {
+          console.log("Play already counted within last 30 minutes");
+          return;
+        }
+      }
+
+      // Make API call to increment play count
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/songs/${trackId}/plays`,
         {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
-            // Add auth token if needed
-            ...(audioRef.current?.dataset?.token
-              ? { Authorization: `Bearer ${audioRef.current.dataset.token}` }
+            // Add the auth token from NextAuth session
+            ...(session?.user?.access_token
+              ? { Authorization: `Bearer ${session.user.access_token}` }
               : {}),
           },
         }
@@ -314,7 +331,11 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
 
       if (!response.ok) {
         console.error("Failed to update play count");
+        return;
       }
+
+      // Store the timestamp of this play
+      localStorage.setItem(trackKey, now.toString());
     } catch (error) {
       console.error("Error updating play count:", error);
     }

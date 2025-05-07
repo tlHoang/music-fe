@@ -24,8 +24,9 @@ interface Track {
   user: User;
   duration: number;
   uploadDate: string;
-  plays?: number;
-  likes?: number;
+  playCount?: number; // Changed from plays to playCount
+  likeCount?: number; // Changed from likes to likeCount
+  commentCount?: number; // Added commentCount
   genre?: string;
 }
 
@@ -216,8 +217,8 @@ const FeedPage = () => {
                 </div>
 
                 <div className="flex justify-between mt-4 text-xs text-gray-500">
-                  <span>{track.plays || 0} plays</span>
-                  <span>{track.likes || 0} likes</span>
+                  <span>{track.playCount || 0} plays</span>
+                  <span>{track.likeCount || 0} likes</span>
                 </div>
               </div>
             </div>
