@@ -1,6 +1,9 @@
+"use client";
+
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import FeaturedPlaylists from "@/components/user/playlist/featured-playlists";
 
 const Homepage = () => {
   return (
@@ -24,6 +27,11 @@ const Homepage = () => {
           <div className="p-4 border rounded shadow">Song 3</div>
           <div className="p-4 border rounded shadow">Song 4</div>
         </div>
+      </section>
+
+      {/* Featured Playlists Section */}
+      <section className="mb-8">
+        <FeaturedPlaylists />
       </section>
 
       {/* Trending Section */}

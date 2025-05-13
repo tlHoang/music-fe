@@ -12,6 +12,8 @@ interface IUser {
 interface ISong {
   _id: string;
   title: string;
+  artist?: string;
+  album?: string;
   duration: number;
   uploadDate: Date;
   playCount: number;
@@ -20,7 +22,9 @@ interface ISong {
   lyrics: string;
   audioUrl: string;
   thumbnail: string;
+  coverImage?: string;
   visibility: string;
+  userId: IUser;
   userId: IUser;
 }
 
@@ -30,6 +34,9 @@ interface IPlaylist {
   userId: IUser;
   songs: ISong[];
   visibility: string;
+  isFeatured?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface ISongsAndPlaylists {

@@ -9,14 +9,17 @@ import {
   MoreHorizontal,
   Plus,
   SkipForward as PlayNext,
+  ListPlus,
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import LikeButton from "./like-button.component";
+import AddToPlaylistButton from "./playlist/add-to-playlist-button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -188,7 +191,7 @@ const TrackCard = ({
                 <span className="sr-only">More options</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem
                 onClick={handleAddToQueue}
                 className="flex items-center gap-2"
@@ -203,6 +206,15 @@ const TrackCard = ({
                 <PlayNext size={14} />
                 <span>Play Next</span>
               </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              {track._id && (
+                <DropdownMenuItem
+                  asChild
+                  className="cursor-pointer"
+                >
+                  <AddToPlaylistButton trackId={track._id} variant="dropdown" size="sm" />
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -261,7 +273,7 @@ const TrackCard = ({
                   <span className="sr-only">More options</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem
                   onClick={handleAddToQueue}
                   className="flex items-center gap-2"
@@ -276,6 +288,15 @@ const TrackCard = ({
                   <PlayNext size={14} />
                   <span>Play Next</span>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {track._id && (
+                  <DropdownMenuItem
+                    asChild
+                    className="cursor-pointer"
+                  >
+                    <AddToPlaylistButton trackId={track._id} variant="dropdown" size="sm" />
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

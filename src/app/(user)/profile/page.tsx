@@ -102,7 +102,7 @@ const UserProfilePage = () => {
 
       // Fetch user playlists
       const playlistsRes = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/users/${userId}/playlists`,
+        `${process.env.NEXT_PUBLIC_API_URL}/playlists/user/${userId}`,
         {
           headers: {
             Authorization: `Bearer ${session?.user?.access_token}`,
@@ -112,8 +112,39 @@ const UserProfilePage = () => {
       );
 
       if (playlistsRes.ok) {
-        const playlistsData = (await playlistsRes.json()).data;
-        setUserPlaylists(playlistsData || []);
+        const playlistsResponse = await playlistsRes.json();
+        console.log("Raw playlists response:", playlistsResponse);
+        
+        // Handle different possible response structures
+        let userPlaylistsData = [];
+        
+        if (playlistsResponse.data?.data && Array.isArray(playlistsResponse.data.data)) {
+          // Structure: { data: { data: [...] } }
+          console.log("Using data.data path");
+          userPlaylistsData = playlistsResponse.data.data;
+        } else if (playlistsResponse.data?.success && playlistsResponse.data?.data && Array.isArray(playlistsResponse.data.data)) {
+          // Structure: { data: { success: true, data: [...] } }
+          console.log("Using data.success.data path");
+          userPlaylistsData = playlistsResponse.data.data;
+        } else if (playlistsResponse.data && Array.isArray(playlistsResponse.data)) {
+          // Structure: { data: [...] }
+          console.log("Using data array path");
+          userPlaylistsData = playlistsResponse.data;
+        } else if (playlistsResponse.success && playlistsResponse.data && Array.isArray(playlistsResponse.data)) {
+          // Structure: { success: true, data: [...] }
+          console.log("Using success.data path");
+          userPlaylistsData = playlistsResponse.data;
+        } else if (Array.isArray(playlistsResponse)) {
+          // Direct array
+          console.log("Using direct array response");
+          userPlaylistsData = playlistsResponse;
+        } else {
+          console.error("Unexpected playlists response format:", playlistsResponse);
+          userPlaylistsData = [];
+        }
+        
+        console.log("Processed playlists:", userPlaylistsData);
+        setUserPlaylists(userPlaylistsData);
       }
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -397,6 +428,9 @@ const UserProfilePage = () => {
                   >
                     <Edit size={16} /> Edit Profile
                   </Button>
+                  <Link href="/playlist/manage">
+                    <Button variant="outline">Manage Playlists</Button>
+                  </Link>
                   <Link href="/profile/my-music">
                     <Button variant="outline">Manage Your Music</Button>
                   </Link>
@@ -525,7 +559,9 @@ const UserProfilePage = () => {
           <TabsContent value="playlists">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Your Playlists</h2>
-              <Button size="sm">Create Playlist</Button>
+              <Link href="/playlist/create">
+                <Button size="sm">Create Playlist</Button>
+              </Link>
             </div>
 
             {userPlaylists.length === 0 ? (
@@ -534,7 +570,9 @@ const UserProfilePage = () => {
                   No playlists found
                 </h2>
                 <p className="mb-4">You haven't created any playlists yet.</p>
-                <Button>Create Your First Playlist</Button>
+                <Link href="/playlist/create">
+                  <Button>Create Your First Playlist</Button>
+                </Link>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -549,9 +587,11 @@ const UserProfilePage = () => {
                     <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
                       {playlist.songs?.length || 0} tracks
                     </p>
-                    <Button size="sm" variant="outline" className="w-full">
-                      View Playlist
-                    </Button>
+                    <Link href={`/playlist/${playlist._id}`}>
+                      <Button size="sm" variant="outline" className="w-full">
+                        View Playlist
+                      </Button>
+                    </Link>
                   </div>
                 ))}
               </div>

@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePlayer } from "@/components/app/player-context";
 import LikeButton from "@/components/user/like-button.component";
 import { Play, Pause } from "lucide-react";
+import { useUserPlaylists } from "@/utils/customHook";
+import { Library, Music, Plus } from "lucide-react";
 
 interface User {
   _id: string;
@@ -49,6 +51,9 @@ const UserProfilePage = () => {
   const { playTrack, currentTrack, isPlaying, togglePlayPause } = usePlayer();
 
   const isCurrentUser = session?.user?._id === userId;
+
+  // Use our custom hook to fetch user playlists
+  const { playlists, loading: playlistsLoading, error: playlistsError } = useUserPlaylists(userId);
 
   useEffect(() => {
     fetchUserProfile();
@@ -440,10 +445,82 @@ const UserProfilePage = () => {
         </TabsContent>
 
         <TabsContent value="playlists">
-          <div className="bg-gray-50 p-8 rounded-lg text-center">
-            <h2 className="text-xl font-semibold mb-4">Coming Soon</h2>
-            <p>Playlists feature will be available soon!</p>
-          </div>
+          {playlistsLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent"></div>
+            </div>
+          ) : playlistsError ? (
+            <div className="bg-red-50 p-6 rounded-lg">
+              <p className="text-red-600">{playlistsError}</p>
+            </div>
+          ) : playlists.length === 0 ? (
+            <div className="bg-gray-50 p-8 rounded-lg text-center">
+              <Library className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <h2 className="text-xl font-semibold mb-4">No playlists found</h2>
+              <p className="text-gray-500 mb-4">
+                {isCurrentUser 
+                  ? "You haven't created any playlists yet." 
+                  : "This user hasn't created any public playlists yet."}
+              </p>
+              
+              {isCurrentUser && (
+                <Link href="/playlist/create">
+                  <Button>
+                    <Plus size={16} className="mr-2" />
+                    Create Your First Playlist
+                  </Button>
+                </Link>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {playlists.map((playlist) => (
+                <Link key={playlist._id} href={`/playlist/${playlist._id}`}>
+                  <div className="bg-white p-4 rounded-lg shadow hover:shadow-md transition-shadow group cursor-pointer h-full flex flex-col">
+                    <div className="bg-gradient-to-br from-purple-400 to-indigo-600 aspect-square rounded-md mb-3 flex items-center justify-center text-white text-4xl relative overflow-hidden">
+                      {playlist.name?.charAt(0).toUpperCase() || "P"}
+                      <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-20 transition-opacity flex items-center justify-center">
+                        <Library className="h-12 w-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </div>
+                    <h3 className="font-semibold text-lg mb-1 line-clamp-1">{playlist.name}</h3>
+                    
+                    {playlist.userId && (
+                      <p className="text-sm text-gray-500 mb-2 line-clamp-1">
+                        By {playlist.userId.name || playlist.userId.username || "Unknown"}
+                      </p>
+                    )}
+                    
+                    <div className="flex items-center text-sm text-gray-500 mt-auto">
+                      <Music size={14} className="mr-1" />
+                      <span>{playlist.songs?.length || 0} songs</span>
+                      {playlist.visibility === "PRIVATE" && (
+                        <span className="ml-auto text-xs bg-gray-100 px-2 py-0.5 rounded-full">
+                          Private
+                        </span>
+                      )}
+                      {playlist.isFeatured && (
+                        <span className="ml-auto text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
+                          Featured
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+          
+          {isCurrentUser && playlists.length > 0 && (
+            <div className="mt-6 text-center">
+              <Link href="/playlist/create">
+                <Button variant="outline">
+                  <Plus size={16} className="mr-2" />
+                  Create New Playlist
+                </Button>
+              </Link>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="about">
