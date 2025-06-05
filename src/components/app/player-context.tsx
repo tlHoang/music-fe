@@ -8,6 +8,10 @@ import React, {
   useRef,
 } from "react";
 import { useSession } from "next-auth/react";
+import {
+  savePlaybackSession,
+  getPlaybackSession,
+} from "./playback-session.service";
 
 interface Track {
   _id: string;
@@ -15,6 +19,7 @@ interface Track {
   audioUrl: string;
   artist?: string;
   coverImage?: string;
+  cover?: string; // Add cover for signed cover URL
   visibility?: string;
   duration?: number;
   uploadDate?: string;
@@ -349,15 +354,21 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
+    // Map cover to coverImage for UI compatibility
+    const trackWithCoverImage = {
+      ...track,
+      coverImage: track.cover || track.coverImage,
+    };
+
     // Reset the queue when directly playing a track from outside
     // This is different from SoundCloud behavior but matches user expectation
-    setPlaylist([track]);
+    setPlaylist([trackWithCoverImage]);
     setCurrentTrackIndex(0);
-    setCurrentTrack(track);
+    setCurrentTrack(trackWithCoverImage);
     setIsPlaying(true);
 
     // Update original playlist for shuffle state
-    setOriginalPlaylist([track]);
+    setOriginalPlaylist([trackWithCoverImage]);
 
     // Record play count after a short delay to ensure
     // it was actually played, not just loaded
@@ -616,6 +627,77 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
       }, 2000);
     }
   };
+
+  // Resume playback prompt on load
+  useEffect(() => {
+    const tryResumePlayback = async () => {
+      if (!session?.user?._id || !session?.user?.access_token) return;
+      // Try to get last played track from localStorage
+      const savedTrack = localStorage.getItem("last_track");
+      if (savedTrack) {
+        const trackObj = JSON.parse(savedTrack);
+        // Query backend for playback session
+        const sessionRes = await getPlaybackSession({
+          userId: session.user._id,
+          trackId: trackObj._id,
+          accessToken: session.user.access_token,
+        });
+        if (sessionRes?.ok && sessionRes.data && sessionRes.data.position > 0) {
+          if (
+            window.confirm(
+              `Resume '${trackObj.title}' from where you left off?`
+            )
+          ) {
+            setPlaylist([trackObj]);
+            setCurrentTrackIndex(0);
+            setCurrentTrack(trackObj);
+            setIsPlaying(true);
+            setTimeout(() => {
+              if (audioRef.current) {
+                audioRef.current.currentTime = sessionRes.data.position / 1000;
+              }
+            }, 500);
+          }
+        }
+      }
+    };
+    tryResumePlayback();
+  }, [session?.user?._id, session?.user?.access_token]);
+
+  // Save playback session on pause, track change, or interval
+  useEffect(() => {
+    if (!session?.user?._id || !session?.user?.access_token || !currentTrack)
+      return;
+    const saveSession = async () => {
+      try {
+        await savePlaybackSession({
+          userId: session.user._id,
+          trackId: currentTrack._id,
+          position: audioRef.current?.currentTime
+            ? Math.floor(audioRef.current.currentTime * 1000)
+            : 0,
+          duration: audioRef.current?.duration
+            ? Math.floor(audioRef.current.duration * 1000)
+            : 0,
+          accessToken: session.user.access_token,
+        });
+      } catch (e) {
+        // ignore
+      }
+    };
+    // Save on pause
+    if (audioRef.current) {
+      audioRef.current.onpause = saveSession;
+    }
+    // Save on track change
+    saveSession();
+    // Optionally, save every 10 seconds
+    const interval = setInterval(saveSession, 10000);
+    return () => {
+      clearInterval(interval);
+      if (audioRef.current) audioRef.current.onpause = null;
+    };
+  }, [session?.user?._id, session?.user?.access_token, currentTrack]);
 
   return (
     <PlayerContext.Provider

@@ -20,6 +20,7 @@ interface Track {
   duration: number;
   uploadDate: string;
   plays?: number;
+  cover?: string; // Add cover field for signed cover URL
 }
 
 const PlayerPage = () => {
@@ -199,6 +200,7 @@ const PlayerPage = () => {
                 <MusicPlayer
                   audioUrl={getFullAudioUrl(currentDisplayTrack.audioUrl)}
                   title={currentDisplayTrack.title}
+                  coverImage={currentDisplayTrack.cover}
                   onEnded={handleTrackEnd}
                   onPrevious={previousTrack}
                   onNext={nextTrack}

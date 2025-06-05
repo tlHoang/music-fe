@@ -22,6 +22,7 @@ import LikeButton from "./like-button.component";
 import AddToPlaylistButton from "./playlist/add-to-playlist-button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useSignedCoverUrl } from "./useSignedCoverUrl";
 
 export interface TrackCardProps {
   track: {
@@ -58,6 +59,11 @@ const TrackCard = ({
   } = usePlayer();
 
   const isCurrentTrack = currentTrack?._id === track._id;
+
+  // For cover image (signed URL)
+  const signedCoverUrl = useSignedCoverUrl(
+    (track as any).cover || track.coverImage
+  );
 
   // Ensure the audio URL is complete with the API base URL if needed
   const getFullAudioUrl = (url: string) => {
@@ -137,9 +143,9 @@ const TrackCard = ({
         onClick={onMainClick} // Add the onClick handler to the main div
       >
         <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded mr-3 flex-shrink-0 relative group">
-          {track.coverImage ? (
+          {signedCoverUrl ? (
             <img
-              src={track.coverImage}
+              src={signedCoverUrl}
               alt={track.title}
               className="h-full w-full object-cover rounded"
             />
@@ -208,11 +214,12 @@ const TrackCard = ({
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               {track._id && (
-                <DropdownMenuItem
-                  asChild
-                  className="cursor-pointer"
-                >
-                  <AddToPlaylistButton trackId={track._id} variant="dropdown" size="sm" />
+                <DropdownMenuItem asChild className="cursor-pointer">
+                  <AddToPlaylistButton
+                    trackId={track._id}
+                    variant="dropdown"
+                    size="sm"
+                  />
                 </DropdownMenuItem>
               )}
             </DropdownMenuContent>
@@ -232,9 +239,9 @@ const TrackCard = ({
       onClick={onMainClick} // Add the onClick handler to the main div
     >
       <div className="relative group aspect-square bg-gray-200 dark:bg-gray-700">
-        {track.coverImage ? (
+        {signedCoverUrl ? (
           <img
-            src={track.coverImage}
+            src={signedCoverUrl}
             alt={track.title}
             className="h-full w-full object-cover"
           />
@@ -290,11 +297,12 @@ const TrackCard = ({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 {track._id && (
-                  <DropdownMenuItem
-                    asChild
-                    className="cursor-pointer"
-                  >
-                    <AddToPlaylistButton trackId={track._id} variant="dropdown" size="sm" />
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <AddToPlaylistButton
+                      trackId={track._id}
+                      variant="dropdown"
+                      size="sm"
+                    />
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>

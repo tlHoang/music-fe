@@ -28,7 +28,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gradient-to-b from-[#f8fafc] to-[#e2e8f0] dark:from-[#18181b] dark:to-[#27272a] min-h-screen`}
       >
         {/* <ToastContainer
           position="bottom-right"

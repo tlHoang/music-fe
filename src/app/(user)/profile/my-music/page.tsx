@@ -31,8 +31,9 @@ interface ISong {
   userId: string;
   duration: number;
   uploadDate: string;
-  plays?: number;
-  likes?: number;
+  playCount?: number;
+  likeCount?: number;
+  cover?: string; // Add cover field for signed cover URL
 }
 
 const MyMusicPage = () => {
@@ -67,6 +68,7 @@ const MyMusicPage = () => {
       });
 
       if (response.data) {
+        console.log("Fetched songs:", response.data);
         setSongs(response.data);
       }
     } catch (error) {
@@ -250,7 +252,15 @@ const MyMusicPage = () => {
                 <tr key={song._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="h-10 w-10 flex-shrink-0 bg-gray-200 rounded-md mr-4"></div>
+                      {song.cover ? (
+                        <img
+                          src={song.cover}
+                          alt={song.title}
+                          className="h-10 w-10 flex-shrink-0 rounded-md mr-4 object-cover bg-gray-200"
+                        />
+                      ) : (
+                        <div className="h-10 w-10 flex-shrink-0 bg-gray-200 rounded-md mr-4"></div>
+                      )}
                       <div className="text-sm font-medium text-gray-900">
                         {song.title}
                       </div>
@@ -275,7 +285,7 @@ const MyMusicPage = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {song.plays || 0}
+                    {song.playCount || 0}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     <DropdownMenu>

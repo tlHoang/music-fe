@@ -258,7 +258,7 @@ export default function PlaylistPage() {
               <div className="flex flex-wrap gap-3 justify-center md:justify-start">
                 <Button
                   onClick={playAllTracks}
-                  className="bg-white text-purple-700 hover:bg-gray-100"
+                  className="bg-white text-black hover:bg-gray-100"
                 >
                   <PlayCircle size={18} className="mr-2" />
                   Play All
@@ -267,7 +267,7 @@ export default function PlaylistPage() {
                 <Button
                   onClick={playShuffled}
                   variant="outline"
-                  className="border-white text-white hover:bg-white/20"
+                  className="border-white text-black hover:bg-white/20"
                 >
                   <Shuffle size={18} className="mr-2" />
                   Shuffle
@@ -280,7 +280,7 @@ export default function PlaylistPage() {
                   <Link href={`/playlist/${playlistId}/edit`}>
                     <Button
                       variant="outline"
-                      className="border-white text-white hover:bg-white/20"
+                      className="border-white text-black hover:bg-white/20"
                     >
                       Edit Playlist
                     </Button>

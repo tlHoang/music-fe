@@ -61,27 +61,35 @@ export default function AddToPlaylistButton({
         }
 
         const result = await response.json();
-        console.log("Playlists response for add button:", result);
-        
+        // console.log("Playlists response for add button:", result);
+
         // Handle different response structures
         let playlistsData = [];
-        
+
         if (result.data?.data && Array.isArray(result.data.data)) {
           // Structure: { data: { data: [...] } }
           playlistsData = result.data.data;
-        } else if (result.data?.success && result.data?.data && Array.isArray(result.data.data)) {
+        } else if (
+          result.data?.success &&
+          result.data?.data &&
+          Array.isArray(result.data.data)
+        ) {
           // Structure: { data: { success: true, data: [...] } }
           playlistsData = result.data.data;
         } else if (result.data && Array.isArray(result.data)) {
           // Structure: { data: [...] }
           playlistsData = result.data;
-        } else if (result.success && result.data && Array.isArray(result.data)) {
+        } else if (
+          result.success &&
+          result.data &&
+          Array.isArray(result.data)
+        ) {
           // Structure directly from backend: { success: true, data: [...] }
           playlistsData = result.data;
         } else {
           throw new Error("Unexpected response format");
         }
-        
+
         setUserPlaylists(playlistsData);
       } catch (error) {
         console.error("Error fetching user playlists:", error);
@@ -125,13 +133,11 @@ export default function AddToPlaylistButton({
 
       if (response.ok && result.success) {
         toast.success("Added to playlist");
-        
+
         // Update the local playlist data
         setUserPlaylists(
           userPlaylists.map((p) =>
-            p._id === playlistId
-              ? { ...p, songs: [...p.songs, trackId] }
-              : p
+            p._id === playlistId ? { ...p, songs: [...p.songs, trackId] } : p
           )
         );
       } else {
@@ -197,7 +203,9 @@ export default function AddToPlaylistButton({
             </div>
           ) : userPlaylists.length === 0 ? (
             <div className="text-center py-6">
-              <p className="text-gray-500 mb-4">You don't have any playlists yet</p>
+              <p className="text-gray-500 mb-4">
+                You don't have any playlists yet
+              </p>
               <Link href="/playlist/create">
                 <Button onClick={() => setOpen(false)}>
                   <Plus size={16} className="mr-1" />
@@ -217,7 +225,8 @@ export default function AddToPlaylistButton({
                   <div>
                     <p className="font-medium">{playlist.name}</p>
                     <p className="text-xs text-gray-500">
-                      {playlist.songs.length} songs • {playlist.visibility === "PUBLIC" ? "Public" : "Private"}
+                      {playlist.songs.length} songs •{" "}
+                      {playlist.visibility === "PUBLIC" ? "Public" : "Private"}
                     </p>
                   </div>
                   {addingToPlaylist === playlist._id ? (

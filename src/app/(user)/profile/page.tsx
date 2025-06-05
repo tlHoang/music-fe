@@ -114,23 +114,37 @@ const UserProfilePage = () => {
       if (playlistsRes.ok) {
         const playlistsResponse = await playlistsRes.json();
         console.log("Raw playlists response:", playlistsResponse);
-        
+
         // Handle different possible response structures
         let userPlaylistsData = [];
-        
-        if (playlistsResponse.data?.data && Array.isArray(playlistsResponse.data.data)) {
+
+        if (
+          playlistsResponse.data?.data &&
+          Array.isArray(playlistsResponse.data.data)
+        ) {
           // Structure: { data: { data: [...] } }
           console.log("Using data.data path");
           userPlaylistsData = playlistsResponse.data.data;
-        } else if (playlistsResponse.data?.success && playlistsResponse.data?.data && Array.isArray(playlistsResponse.data.data)) {
+        } else if (
+          playlistsResponse.data?.success &&
+          playlistsResponse.data?.data &&
+          Array.isArray(playlistsResponse.data.data)
+        ) {
           // Structure: { data: { success: true, data: [...] } }
           console.log("Using data.success.data path");
           userPlaylistsData = playlistsResponse.data.data;
-        } else if (playlistsResponse.data && Array.isArray(playlistsResponse.data)) {
+        } else if (
+          playlistsResponse.data &&
+          Array.isArray(playlistsResponse.data)
+        ) {
           // Structure: { data: [...] }
           console.log("Using data array path");
           userPlaylistsData = playlistsResponse.data;
-        } else if (playlistsResponse.success && playlistsResponse.data && Array.isArray(playlistsResponse.data)) {
+        } else if (
+          playlistsResponse.success &&
+          playlistsResponse.data &&
+          Array.isArray(playlistsResponse.data)
+        ) {
           // Structure: { success: true, data: [...] }
           console.log("Using success.data path");
           userPlaylistsData = playlistsResponse.data;
@@ -139,10 +153,13 @@ const UserProfilePage = () => {
           console.log("Using direct array response");
           userPlaylistsData = playlistsResponse;
         } else {
-          console.error("Unexpected playlists response format:", playlistsResponse);
+          console.error(
+            "Unexpected playlists response format:",
+            playlistsResponse
+          );
           userPlaylistsData = [];
         }
-        
+
         console.log("Processed playlists:", userPlaylistsData);
         setUserPlaylists(userPlaylistsData);
       }
@@ -363,14 +380,15 @@ const UserProfilePage = () => {
               <>
                 <h1 className="text-2xl font-bold mb-2">
                   {userData.name || userData.username || userData.email}
+                  test1
                 </h1>
-                {userData.bio ? (
+                {userData.username ? (
                   <p className="text-gray-600 dark:text-gray-300 mb-4">
-                    {userData.bio}
+                    {/* {userData.bio} */}
                   </p>
                 ) : (
                   <p className="text-gray-400 dark:text-gray-500 italic mb-4">
-                    No bio provided
+                    {/* No bio provided */}
                   </p>
                 )}
               </>
@@ -384,7 +402,7 @@ const UserProfilePage = () => {
                 >
                   <span className="font-semibold">
                     {/* {userData.followersCount || 0} */}
-                    temp
+                    {/* temp */}1
                   </span>{" "}
                   Followers
                 </Link>
@@ -394,7 +412,7 @@ const UserProfilePage = () => {
                 >
                   <span className="font-semibold">
                     {/* {userData.followingCount || 0} */}
-                    temp
+                    {/* temp */}1
                   </span>{" "}
                   Following
                 </Link>
@@ -459,7 +477,7 @@ const UserProfilePage = () => {
           <TabsContent value="tracks">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Your Tracks</h2>
-              <Dialog>
+              {/* <Dialog>
                 <DialogTrigger asChild>
                   <Button size="sm" className="flex gap-2 items-center">
                     <Upload size={16} /> Upload New
@@ -469,10 +487,9 @@ const UserProfilePage = () => {
                   <DialogHeader>
                     <DialogTitle>Upload a new track</DialogTitle>
                   </DialogHeader>
-                  {/* You can implement upload form here or import an existing component */}
                   <p className="text-center py-4">Upload form would go here</p>
                 </DialogContent>
-              </Dialog>
+              </Dialog> */}
             </div>
 
             {tracks.length === 0 ? (
@@ -535,8 +552,8 @@ const UserProfilePage = () => {
 
                         <div className="ml-4 flex items-center gap-2">
                           <span className="text-sm text-gray-500">
-                            {/* {track.plays || 0} plays */}
-                            temp plays
+                            {track.playCount || 0} plays
+                            {/* temp plays */}
                           </span>
 
                           {/* Add Like Button with Queue functionality */}

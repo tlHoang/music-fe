@@ -35,6 +35,7 @@ const UploadPage = () => {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [genresLoading, setGenresLoading] = useState(false);
+  const [cover, setCover] = useState<File | null>(null);
 
   const [genreSearchQuery, setGenreSearchQuery] = useState("");
   const [isGenreDropdownOpen, setIsGenreDropdownOpen] = useState(false);
@@ -95,6 +96,22 @@ const UploadPage = () => {
     }
   };
 
+  const MAX_COVER_SIZE_MB = 2; // 2MB limit
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selected = e.target.files[0];
+      if (selected.size > MAX_COVER_SIZE_MB * 1024 * 1024) {
+        setMessage(`Cover image must be less than ${MAX_COVER_SIZE_MB}MB.`);
+        setCover(null);
+        // Optionally reset the input value
+        e.target.value = "";
+        return;
+      }
+      setCover(selected);
+    }
+  };
+
   const handleGenreChange = (genreId: string) => {
     setSelectedGenreIds((prevSelected) => {
       if (prevSelected.includes(genreId)) {
@@ -114,17 +131,14 @@ const UploadPage = () => {
     }
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("audio", file);
+    if (cover) formData.append("cover", cover);
     formData.append("title", title);
     formData.append("visibility", visibility);
-
-    // Handle genre IDs - now using 'genres' field instead of 'genreIds'
     if (selectedGenreIds.length > 0) {
-      // Add each genre ID as a separate field with the same name
       selectedGenreIds.forEach((genreId) => {
         formData.append("genres", genreId);
       });
-      console.log("Sending genres:", selectedGenreIds);
     }
 
     try {
@@ -173,6 +187,7 @@ const UploadPage = () => {
       setVisibility("PUBLIC");
       setSelectedGenreIds([]);
       setFile(null);
+      setCover(null);
 
       // Reset file input
       const fileInput = document.getElementById(
@@ -423,6 +438,29 @@ const UploadPage = () => {
                 )}
               </div>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <label
+              htmlFor="cover-input"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Cover Image (Optional, max 2MB)
+            </label>
+            <input
+              id="cover-input"
+              name="cover-input"
+              type="file"
+              accept="image/*"
+              onChange={handleCoverChange}
+              className="block w-full text-sm text-gray-700 border border-gray-300 rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            {cover && (
+              <p className="text-sm text-indigo-600 mt-2">
+                Selected: {cover.name} (
+                {(cover.size / (1024 * 1024)).toFixed(2)} MB)
+              </p>
+            )}
           </div>
 
           {progress > 0 && (

@@ -1,3 +1,6 @@
+// This component is deprecated and no longer used. All upload logic is now handled in the /upload route page.
+// You can safely delete this file.
+
 import React, { useState } from "react";
 import { useSession } from "next-auth/react";
 
@@ -10,13 +13,18 @@ interface UploadMusicResponse {
 
 const UploadMusic = () => {
   const { data: session } = useSession();
-  const [file, setFile] = useState(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [cover, setCover] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [visibility, setVisibility] = useState("PUBLIC");
   const [message, setMessage] = useState("");
 
   const handleFileChange = (e: any) => {
     setFile(e.target.files[0]);
+  };
+
+  const handleCoverChange = (e: any) => {
+    setCover(e.target.files[0]);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -28,7 +36,8 @@ const UploadMusic = () => {
     }
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("audio", file);
+    if (cover) formData.append("cover", cover);
     formData.append("title", title);
     formData.append("visibility", visibility);
 
@@ -83,8 +92,12 @@ const UploadMusic = () => {
           </select>
         </div>
         <div>
-          <label>File:</label>
+          <label>Audio File:</label>
           <input type="file" onChange={handleFileChange} required />
+        </div>
+        <div>
+          <label>Cover Image:</label>
+          <input type="file" accept="image/*" onChange={handleCoverChange} />
         </div>
         <button type="submit">Upload</button>
       </form>
