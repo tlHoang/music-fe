@@ -1,9 +1,30 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
+import {
+  UserGrowthChart,
+  TrackDistributionChart,
+} from "@/components/admin/dashboard-charts";
+import {
+  LuUsers,
+  LuMusic,
+  LuListMusic,
+  LuUserCheck,
+  LuEye,
+  LuEyeOff,
+  LuUserPlus,
+  LuUpload,
+  LuCirclePlay,
+  LuThumbsUp,
+  LuPlus,
+  LuActivity,
+  LuStar,
+} from "react-icons/lu";
 
 interface ActivityItem {
   _id: string;
@@ -12,7 +33,7 @@ interface ActivityItem {
   timestamp: string;
   userId?: {
     _id: string;
-    name: string;
+    username: string;
     profilePicture?: string;
   };
   targetId?: string;
@@ -22,23 +43,65 @@ interface ActivityItem {
 
 interface Stats {
   users: number;
+  activeUsers: number;
   tracks: number;
+  publicTracks: number;
+  privateTracks: number;
   playlists: number;
-  comments: number;
-  likes: number;
+  newUsers: number;
+  newTracks: number;
 }
+
+const StatCard = ({
+  title,
+  value,
+  icon: Icon,
+  description,
+  loading,
+}: {
+  title: string;
+  value: number;
+  icon: React.ElementType;
+  description?: string;
+  loading: boolean;
+}) => {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Icon className="h-5 w-5 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <Skeleton className="h-10 w-20" />
+        ) : (
+          <>
+            <div className="text-2xl font-bold">{value.toLocaleString()}</div>
+            {description && (
+              <p className="text-xs text-muted-foreground">{description}</p>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
 const DashboardPage = () => {
   const { data: session } = useSession();
   const [stats, setStats] = useState<Stats>({
     users: 0,
+    activeUsers: 0,
     tracks: 0,
+    publicTracks: 0,
+    privateTracks: 0,
     playlists: 0,
-    comments: 0,
-    likes: 0,
+    newUsers: 0,
+    newTracks: 0,
   });
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [statsData, setStatsData] = useState<any>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -60,37 +123,59 @@ const DashboardPage = () => {
         if (!statsResponse.ok) {
           throw new Error(`HTTP error fetching stats: ${statsResponse.status}`);
         }
+        const responseData = await statsResponse.json(); // Handle nested structure, common in APIs
+        setStatsData(responseData); // Store the full stats data for charts
 
-        const statsData = await statsResponse.json();
-        console.log("Stats Data:", statsData);
-        
-        // Fix: Access the correct nested structure for stats data
-        if (statsData && statsData.data && statsData.data.success && statsData.data.data && statsData.data.data.counts) {
-          // For deeply nested response like: { data: { success: true, data: { counts: {...} } } }
+        if (
+          responseData &&
+          responseData.data &&
+          responseData.data.success &&
+          responseData.data.data &&
+          responseData.data.data.counts
+        ) {
+          const counts = responseData.data.data.counts;
           setStats({
-            users: statsData.data.data.counts.totalUsers || 0,
-            tracks: statsData.data.data.counts.totalSongs || 0,
-            playlists: statsData.data.data.counts.totalPlaylists || 0,
-            comments: statsData.data.data.counts.totalComments || 0,
-            likes: statsData.data.data.counts.totalLikes || 0,
+            users: counts.totalUsers || 0,
+            activeUsers: counts.activeUsers || 0,
+            tracks: counts.totalSongs || 0,
+            publicTracks: counts.publicSongs || 0,
+            privateTracks: counts.privateSongs || 0,
+            playlists: counts.totalPlaylists || 0,
+            newUsers: counts.newUsers || 0,
+            newTracks: counts.newSongs || 0,
           });
-        } else if (statsData && statsData.data && statsData.data.counts) {
-          // For response like: { data: { counts: {...} } }
+        } else if (
+          responseData &&
+          responseData.data &&
+          responseData.data.counts
+        ) {
+          const counts = responseData.data.counts;
           setStats({
-            users: statsData.data.counts.totalUsers || 0,
-            tracks: statsData.data.counts.totalSongs || 0,
-            playlists: statsData.data.counts.totalPlaylists || 0,
-            comments: statsData.data.counts.totalComments || 0,
-            likes: statsData.data.counts.totalLikes || 0,
+            users: counts.totalUsers || 0,
+            activeUsers: counts.activeUsers || 0,
+            tracks: counts.totalSongs || 0,
+            publicTracks: counts.publicSongs || 0,
+            privateTracks: counts.privateSongs || 0,
+            playlists: counts.totalPlaylists || 0,
+            newUsers: counts.newUsers || 0,
+            newTracks: counts.newSongs || 0,
           });
-        } else if (statsData && statsData.success && statsData.data && statsData.data.counts) {
-          // For response like: { success: true, data: { counts: {...} } }
+        } else if (
+          statsData &&
+          statsData.success &&
+          statsData.data &&
+          statsData.data.counts
+        ) {
+          const counts = statsData.data.counts;
           setStats({
-            users: statsData.data.counts.totalUsers || 0,
-            tracks: statsData.data.counts.totalSongs || 0,
-            playlists: statsData.data.counts.totalPlaylists || 0,
-            comments: statsData.data.counts.totalComments || 0,
-            likes: statsData.data.counts.totalLikes || 0,
+            users: counts.totalUsers || 0,
+            activeUsers: counts.activeUsers || 0,
+            tracks: counts.totalSongs || 0,
+            publicTracks: counts.publicSongs || 0,
+            privateTracks: counts.privateSongs || 0,
+            playlists: counts.totalPlaylists || 0,
+            newUsers: counts.newUsers || 0,
+            newTracks: counts.newSongs || 0,
           });
         } else {
           console.error("Unexpected stats data format:", statsData);
@@ -98,7 +183,7 @@ const DashboardPage = () => {
 
         // Fetch recent activity data
         const activityResponse = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/admin/activity`,
+          `${process.env.NEXT_PUBLIC_API_URL}/admin/activity?limit=10`,
           {
             headers: {
               Authorization: `Bearer ${session.user.access_token}`,
@@ -113,26 +198,23 @@ const DashboardPage = () => {
         }
 
         const activityData = await activityResponse.json();
-        console.log("Activity Data:", activityData);
-        
-        // Handle the deeply nested structure: statusCode -> data -> success -> data -> activities
+
+        // Handle the deeply nested structure
         if (
-          activityData && 
-          activityData.data && 
-          activityData.data.success && 
-          activityData.data.data && 
+          activityData &&
+          activityData.data &&
+          activityData.data.success &&
+          activityData.data.data &&
           Array.isArray(activityData.data.data.activities)
         ) {
           setRecentActivity(activityData.data.data.activities);
         } else if (
-          // Fallback to check other possible response structures
-          activityData && 
-          activityData.data && 
+          activityData &&
+          activityData.data &&
           Array.isArray(activityData.data.activities)
         ) {
           setRecentActivity(activityData.data.activities);
         } else {
-          // Handle unexpected response format
           console.error("Unexpected activity data format:", activityData);
           setRecentActivity([]);
         }
@@ -169,309 +251,183 @@ const DashboardPage = () => {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "USER_REGISTERED":
-        return (
-          <div className="bg-blue-100 p-3 rounded-full">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-blue-500"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-              />
-            </svg>
-          </div>
-        );
+        return <LuUserPlus className="h-6 w-6 text-blue-500" />;
       case "TRACK_UPLOADED":
-        return (
-          <div className="bg-green-100 p-3 rounded-full">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-green-500"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-              />
-            </svg>
-          </div>
-        );
-      case "PLAYLIST_CREATED":
-        return (
-          <div className="bg-purple-100 p-3 rounded-full">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-purple-500"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
-              />
-            </svg>
-          </div>
-        );
-      case "COMMENT_ADDED":
-        return (
-          <div className="bg-yellow-100 p-3 rounded-full">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-yellow-500"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-              />
-            </svg>
-          </div>
-        );
+        return <LuUpload className="h-6 w-6 text-green-500" />;
+      case "TRACK_PLAYED":
+        return <LuCirclePlay className="h-6 w-6 text-purple-500" />;
       case "TRACK_LIKED":
       case "PLAYLIST_LIKED":
-        return (
-          <div className="bg-red-100 p-3 rounded-full">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-red-500"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
-              />
-            </svg>
-          </div>
-        );
+        return <LuThumbsUp className="h-6 w-6 text-red-500" />;
+      case "PLAYLIST_CREATED":
+        return <LuPlus className="h-6 w-6 text-yellow-500" />;
       default:
-        return (
-          <div className="bg-gray-100 p-3 rounded-full">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6 text-gray-500"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-        );
+        return <LuActivity className="h-6 w-6 text-gray-500" />;
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-3 gap-6">
-        {/* Users Card */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-700">Users</h2>
-            <div className="p-2 bg-blue-500 rounded-full text-white">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"
-                />
-              </svg>
-            </div>
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+        <p className="text-muted-foreground">
+          Overview of your platform's statistics and recent activity.
+        </p>
+      </div>{" "}
+      {/* Statistics Grid */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total Users"
+          value={stats.users}
+          icon={LuUsers}
+          description="All registered users"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Active Users"
+          value={stats.activeUsers}
+          icon={LuUserCheck}
+          description="Recently active"
+          loading={isLoading}
+        />
+        <StatCard
+          title="New Users"
+          value={stats.newUsers}
+          icon={LuUserPlus}
+          description="Recent registrations"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Total Playlists"
+          value={stats.playlists}
+          icon={LuListMusic}
+          description="User created lists"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Total Tracks"
+          value={stats.tracks}
+          icon={LuMusic}
+          description="All uploaded tracks"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Public Tracks"
+          value={stats.publicTracks}
+          icon={LuEye}
+          description="Publicly available"
+          loading={isLoading}
+        />
+        <StatCard
+          title="Private Tracks"
+          value={stats.privateTracks}
+          icon={LuEyeOff}
+          description="Private uploads"
+          loading={isLoading}
+        />
+        <StatCard
+          title="New Tracks"
+          value={stats.newTracks}
+          icon={LuUpload}
+          description="Recently uploaded"
+          loading={isLoading}
+        />
+      </div>
+      {/* Charts Section */}
+      <div>
+        <h3 className="text-xl font-semibold mb-4">Analytics</h3>
+        <div className="grid gap-6 grid-cols-1 lg:grid-cols-2 items-start">
+          {/* User Growth Chart with real data */}
+          <div className="w-full">
+            <UserGrowthChart
+              data={
+                statsData?.data?.data?.userGrowth
+                  ? statsData.data.data.userGrowth.map(
+                      (item: { _id: string; count: number }) => ({
+                        name: item._id.split("-").slice(1).join("/"), // Convert YYYY-MM-DD to MM/DD
+                        users: item.count,
+                      })
+                    )
+                  : undefined
+              }
+            />
           </div>
-          <p className="mt-4 text-3xl font-bold">
-            {isLoading ? (
-              <span className="animate-pulse">...</span>
-            ) : (
-              stats.users
-            )}
-          </p>
-          <div className="mt-4">
-            <Link
-              href="/admin/users"
-              className="text-blue-500 hover:text-blue-700 text-sm font-medium"
-            >
-              View all users
-            </Link>
-          </div>
-        </div>
-
-        {/* Tracks Card */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-700">Tracks</h2>
-            <div className="p-2 bg-green-500 rounded-full text-white">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                />
-              </svg>
-            </div>
-          </div>
-          <p className="mt-4 text-3xl font-bold">
-            {isLoading ? (
-              <span className="animate-pulse">...</span>
-            ) : (
-              stats.tracks
-            )}
-          </p>
-          <div className="mt-4">
-            <Link
-              href="/admin/tracks"
-              className="text-green-500 hover:text-green-700 text-sm font-medium"
-            >
-              View all tracks
-            </Link>
-          </div>
-        </div>
-
-        {/* Playlists Card */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-700">Playlists</h2>
-            <div className="p-2 bg-purple-500 rounded-full text-white">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                />
-              </svg>
-            </div>
-          </div>
-          <p className="mt-4 text-3xl font-bold">
-            {isLoading ? (
-              <span className="animate-pulse">...</span>
-            ) : (
-              stats.playlists
-            )}
-          </p>
-          <div className="mt-4">
-            <Link
-              href="/admin/playlists"
-              className="text-purple-500 hover:text-purple-700 text-sm font-medium"
-            >
-              View all playlists
-            </Link>
+          {/* Track Distribution with real data */}
+          <div className="w-full">
+            <TrackDistributionChart
+              data={[
+                { name: "Public", value: stats.publicTracks || 0 },
+                { name: "Private", value: stats.privateTracks || 0 },
+              ]}
+            />
           </div>
         </div>
       </div>
-
-      {/* Recent Activity */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">
-          Recent Activity
-        </h2>
-        {isLoading ? (
-          <div className="space-y-4">
-            {[...Array(5)].map((_, i) => (
-              <div
-                key={i}
-                className="flex items-center space-x-4 p-3 animate-pulse bg-gray-50 rounded-lg"
-              >
-                <div className="bg-gray-200 p-3 rounded-full w-12 h-12"></div>
-                <div className="flex-1">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : recentActivity.length === 0 ? (
-          <div className="text-center py-6 text-gray-500">
-            No recent activity found
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {recentActivity.map((activity) => (
-              <div
-                key={activity._id}
-                className="flex items-center space-x-4 p-3 hover:bg-gray-50 rounded-lg"
-              >
-                {getActivityIcon(activity.type)}
-                <div className="flex-1">
-                  <p className="text-sm text-gray-800">
-                    {activity.userId?.name && (
-                      <Link
-                        href={`/profile/${activity.userId._id}`}
-                        className="font-medium text-blue-600 hover:underline"
-                      >
-                        {activity.userId.name}
-                      </Link>
-                    )}{" "}
-                    {activity.message}
-                    {activity.targetType && activity.targetId && (
-                      <Link
-                        href={`/${activity.targetType.toLowerCase()}/${activity.targetId}`}
-                        className="font-medium text-blue-600 hover:underline"
-                      >
-                        {" "}
-                        {activity.targetName ||
-                          activity.targetType.toLowerCase()}
-                      </Link>
-                    )}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {formatRelativeTime(activity.timestamp)}
-                  </p>
-                </div>
-              </div>
-            ))}
-
-            <div className="pt-4 flex justify-center">
-              <button className="text-blue-500 hover:text-blue-700 text-sm font-medium">
-                View all activity
-              </button>
+      {/* Recent Activity Section */}
+      <div>
+        <h3 className="text-xl font-semibold mb-4">Recent Activity</h3>
+        <Card>
+          <CardContent className="p-0">
+            <div className="divide-y max-h-[400px] overflow-y-auto">
+              {isLoading ? (
+                // Loading skeletons
+                Array(5)
+                  .fill(0)
+                  .map((_, i) => (
+                    <div key={i} className="flex items-center p-4">
+                      <Skeleton className="h-12 w-12 rounded-full" />
+                      <div className="ml-4 space-y-2">
+                        <Skeleton className="h-4 w-[250px]" />
+                        <Skeleton className="h-4 w-[200px]" />
+                      </div>
+                    </div>
+                  ))
+              ) : recentActivity.length > 0 ? (
+                recentActivity.map((activity) => (
+                  <div
+                    key={activity._id}
+                    className="flex items-start p-4 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="rounded-full p-2 bg-primary/10">
+                      {getActivityIcon(activity.type)}
+                    </div>
+                    <div className="ml-4 flex-1">
+                      {" "}
+                      <div className="flex items-center justify-between">
+                        {activity.userId?.username && (
+                          <Link
+                            href={`/admin/users/${activity.userId._id}`}
+                            className="font-medium hover:underline"
+                          >
+                            {activity.userId.username}
+                          </Link>
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {formatRelativeTime(activity.timestamp)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        {activity.message}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="p-4 text-center text-muted-foreground">
+                  No recent activity found.
+                </p>
+              )}
             </div>
-          </div>
-        )}
+          </CardContent>
+        </Card>
+      </div>
+      <div className="flex justify-center mt-6">
+        <Link
+          href="/admin/activity"
+          className="text-sm text-primary hover:underline"
+        >
+          View all activity →
+        </Link>
       </div>
     </div>
   );

@@ -41,6 +41,34 @@ import {
   XCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import PlaylistCoverUpload from "@/components/user/playlist/playlist-cover-upload";
+
+// Interface definitions
+interface IUser {
+  _id: string;
+  name: string;
+  username: string;
+  email: string;
+}
+
+interface ISong {
+  _id: string;
+  title: string;
+  duration: number;
+  audioUrl: string;
+  coverImage?: string;
+  thumbnail?: string;
+  artist?: string;
+}
+
+interface IPlaylist {
+  _id: string;
+  name: string;
+  visibility: string;
+  songs: ISong[];
+  userId: IUser;
+  cover?: string;
+}
 
 export default function ManagePlaylistsPage() {
   const { data: session } = useSession();
@@ -115,7 +143,7 @@ export default function ManagePlaylistsPage() {
         if (response.status === 401) {
           console.error("Authentication error - token may be invalid");
           // Optionally force a re-login
-          // signOut({ redirect: true, callbackUrl: "/login" });
+          // signOut({ redirect: true, redirectTo: "/login" });
           setError("Your session has expired. Please log in again.");
         } else {
           throw new Error(
@@ -753,49 +781,69 @@ export default function ManagePlaylistsPage() {
               key={playlist._id}
               className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6"
             >
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-                <div>
-                  <h2 className="text-xl font-semibold">{playlist.name}</h2>
-                  <div className="flex items-center mt-1 text-sm text-gray-500">
-                    {playlist.visibility === "PUBLIC" ? (
-                      <>
-                        <Globe size={14} className="mr-1" />
-                        <span>Public</span>
-                      </>
+              <div className="flex flex-col sm:flex-row gap-4 mb-4">
+                {/* Playlist Cover */}
+                <div className="w-20 h-20 flex-shrink-0">
+                  <div className="bg-gradient-to-br from-purple-400 to-indigo-600 aspect-square rounded-md flex items-center justify-center text-white text-xl relative overflow-hidden">
+                    {playlist.cover ? (
+                      <img
+                        src={playlist.cover}
+                        alt={playlist.name}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
-                      <>
-                        <Lock size={14} className="mr-1" />
-                        <span>Private</span>
-                      </>
+                      playlist.name?.charAt(0).toUpperCase() || "P"
                     )}
-                    <span className="mx-2">•</span>
-                    <Music size={14} className="mr-1" />
-                    <span>{playlist.songs?.length || 0} songs</span>
                   </div>
                 </div>
 
-                <div className="flex gap-2 mt-2 sm:mt-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleAddSongsClick(playlist)}
-                  >
-                    <Plus size={16} className="mr-1" /> Add Songs
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEditClick(playlist)}
-                  >
-                    <Pencil size={16} className="mr-1" /> Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => handleDeleteClick(playlist)}
-                  >
-                    <Trash2 size={16} className="mr-1" /> Delete
-                  </Button>
+                {/* Playlist Info */}
+                <div className="flex-1">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-2">
+                    <div>
+                      <h2 className="text-xl font-semibold">{playlist.name}</h2>
+                      <div className="flex items-center mt-1 text-sm text-gray-500">
+                        {playlist.visibility === "PUBLIC" ? (
+                          <>
+                            <Globe size={14} className="mr-1" />
+                            <span>Public</span>
+                          </>
+                        ) : (
+                          <>
+                            <Lock size={14} className="mr-1" />
+                            <span>Private</span>
+                          </>
+                        )}
+                        <span className="mx-2">•</span>
+                        <Music size={14} className="mr-1" />
+                        <span>{playlist.songs?.length || 0} songs</span>
+                      </div>{" "}
+                    </div>
+
+                    <div className="flex gap-2 mt-2 sm:mt-0">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAddSongsClick(playlist)}
+                      >
+                        <Plus size={16} className="mr-1" /> Add Songs
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleEditClick(playlist)}
+                      >
+                        <Pencil size={16} className="mr-1" /> Edit
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteClick(playlist)}
+                      >
+                        <Trash2 size={16} className="mr-1" /> Delete
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -860,7 +908,7 @@ export default function ManagePlaylistsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Playlist</DialogTitle>
-          </DialogHeader>
+          </DialogHeader>{" "}
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name">Playlist Name</Label>
@@ -873,6 +921,24 @@ export default function ManagePlaylistsPage() {
                 placeholder="My Playlist"
               />
             </div>
+            <div className="space-y-2">
+              <Label>Playlist Cover</Label>
+              <PlaylistCoverUpload
+                playlistId={selectedPlaylist?._id || ""}
+                currentCover={selectedPlaylist?.cover}
+                onUploadSuccess={(newCoverUrl) => {
+                  if (selectedPlaylist) {
+                    setSelectedPlaylist({
+                      ...selectedPlaylist,
+                      cover: newCoverUrl,
+                    });
+                    // Refresh the playlists list to show the new cover
+                    fetchUserPlaylists();
+                  }
+                }}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="visibility">Visibility</Label>
               <Select

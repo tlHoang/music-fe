@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
+import { useSignedCoverUrl } from "@/components/user/useSignedCoverUrl";
 
 interface User {
   _id: string;
@@ -17,6 +18,79 @@ interface User {
   tracksCount: number;
   isFollowing?: boolean;
 }
+
+// Component for user card with signed URL handling
+const UserCard = ({
+  user,
+  session,
+  getFollowStatus,
+  handleFollow,
+  handleUnfollow,
+}: {
+  user: User;
+  session: any;
+  getFollowStatus: (user: User) => boolean;
+  handleFollow: (userId: string) => void;
+  handleUnfollow: (userId: string) => void;
+}) => {
+  const signedAvatarUrl = useSignedCoverUrl(user.avatar);
+
+  return (
+    <div
+      key={user._id}
+      className="bg-white rounded-lg shadow-md overflow-hidden"
+    >
+      <div className="p-6">
+        <div className="flex items-center mb-4">
+          <div className="w-16 h-16 rounded-full overflow-hidden mr-4">
+            <Image
+              src={signedAvatarUrl || "/default-profile.jpg"}
+              alt={user._id}
+              width={64}
+              height={64}
+              className="object-cover w-full h-full"
+            />
+          </div>
+          <div>
+            <Link href={`/profile/${user._id}`}>
+              <h3 className="font-semibold text-lg hover:text-blue-600">
+                {user.name || user.email}
+              </h3>
+            </Link>
+            <div className="text-sm text-gray-500 flex gap-3">
+              <span>{user.followersCount || 0} followers</span>
+              <span>•</span>
+              <span>{user.tracksCount || 0} tracks</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center">
+          <Link href={`/profile/${user._id}`}>
+            <Button variant="outline" size="sm">
+              View Profile
+            </Button>
+          </Link>
+
+          {session?.user?._id !== user._id &&
+            (getFollowStatus(user) ? (
+              <Button
+                variant="outline"
+                onClick={() => handleUnfollow(user._id)}
+                size="sm"
+              >
+                Unfollow
+              </Button>
+            ) : (
+              <Button onClick={() => handleFollow(user._id)} size="sm">
+                Follow
+              </Button>
+            ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const DiscoverPage = () => {
   const { data: session } = useSession();
@@ -46,7 +120,6 @@ const DiscoverPage = () => {
       });
 
       if (response.data) {
-        // console.log("Users data from API:", response.data);
         // Initialize followUpdates with current follow status from API
         const initialFollowStates: Record<string, boolean> = {};
         response.data.forEach((user: User) => {
@@ -89,7 +162,6 @@ const DiscoverPage = () => {
       );
 
       const data = await response.json();
-      // console.log("Follow response:", data);
 
       if (!data.data.success) {
         // Revert optimistic update on failure
@@ -102,6 +174,8 @@ const DiscoverPage = () => {
   };
 
   const handleUnfollow = async (userId: string) => {
+    if (!session?.user?.access_token) return;
+
     try {
       // Optimistic UI update
       setFollowUpdates({ ...followUpdates, [userId]: false });
@@ -151,6 +225,7 @@ const DiscoverPage = () => {
 
   return (
     <div className="container mx-auto p-6">
+      {" "}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold mb-2">Discover Artists</h1>
@@ -158,17 +233,20 @@ const DiscoverPage = () => {
             Find new artists to follow and explore their music
           </p>
         </div>
-        <Link href="/homepage/feed">
-          <Button variant="outline">Back to Feed</Button>
-        </Link>
+        <div className="flex gap-3">
+          <Link href="/discover-all">
+            <Button variant="outline">Discover All Content</Button>
+          </Link>
+          <Link href="/homepage/feed">
+            <Button variant="outline">Back to Feed</Button>
+          </Link>
+        </div>
       </div>
-
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-6">
           {error}
         </div>
       )}
-
       <div className="mb-8">
         <Input
           type="text"
@@ -178,7 +256,6 @@ const DiscoverPage = () => {
           className="max-w-md"
         />
       </div>
-
       {filteredUsers.length === 0 ? (
         <div className="bg-gray-50 p-8 rounded-lg text-center">
           <h2 className="text-xl font-semibold mb-4">No artists found</h2>
@@ -191,59 +268,14 @@ const DiscoverPage = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredUsers.map((user) => (
-            <div
+            <UserCard
               key={user._id}
-              className="bg-white rounded-lg shadow-md overflow-hidden"
-            >
-              <div className="p-6">
-                <div className="flex items-center mb-4">
-                  <div className="w-16 h-16 rounded-full overflow-hidden mr-4">
-                    <Image
-                      src={user.avatar || "/default-profile.jpg"}
-                      alt={user._id}
-                      width={64}
-                      height={64}
-                      className="object-cover w-full h-full"
-                    />
-                  </div>
-                  <div>
-                    <Link href={`/profile/${user._id}`}>
-                      <h3 className="font-semibold text-lg hover:text-blue-600">
-                        {user.name || user.email}
-                      </h3>
-                    </Link>
-                    <div className="text-sm text-gray-500 flex gap-3">
-                      <span>{user.followersCount || 0} followers</span>
-                      <span>•</span>
-                      <span>{user.tracksCount || 0} tracks</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center">
-                  <Link href={`/profile/${user._id}`}>
-                    <Button variant="outline" size="sm">
-                      View Profile
-                    </Button>
-                  </Link>
-
-                  {session?.user?._id !== user._id &&
-                    (getFollowStatus(user) ? (
-                      <Button
-                        variant="outline"
-                        onClick={() => handleUnfollow(user._id)}
-                        size="sm"
-                      >
-                        Unfollow
-                      </Button>
-                    ) : (
-                      <Button onClick={() => handleFollow(user._id)} size="sm">
-                        Follow
-                      </Button>
-                    ))}
-                </div>
-              </div>
-            </div>
+              user={user}
+              session={session}
+              getFollowStatus={getFollowStatus}
+              handleFollow={handleFollow}
+              handleUnfollow={handleUnfollow}
+            />
           ))}
         </div>
       )}

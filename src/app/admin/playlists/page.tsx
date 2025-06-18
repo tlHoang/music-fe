@@ -1,9 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useSession } from "next-auth/react";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,8 +21,44 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
-import { toast } from "sonner";
+import { LuMessageSquareMore, LuSearch, LuMusic } from "react-icons/lu";
 
 interface Playlist {
   _id: string;
@@ -33,385 +78,653 @@ interface Playlist {
   description?: string;
 }
 
+const formatDate = (dateString?: string) => {
+  if (!dateString) return "N/A";
+  return new Date(dateString).toLocaleDateString();
+};
+
+const PlaylistRow = ({
+  playlist,
+  onViewDetails,
+  onEditPlaylist,
+  onDeletePlaylist,
+  onToggleVisibility,
+  onToggleFeatured,
+}: {
+  playlist: Playlist;
+  onViewDetails: (playlistId: string) => void;
+  onEditPlaylist: (playlist: Playlist) => void;
+  onDeletePlaylist: (playlistId: string) => void;
+  onToggleVisibility: (playlistId: string, isPublic: boolean) => void;
+  onToggleFeatured: (playlistId: string, isFeatured: boolean) => void;
+}) => (
+  <TableRow key={playlist._id}>
+    <TableCell className="w-[60px]">
+      {playlist.coverImage ? (
+        <div className="w-10 h-10 rounded bg-muted overflow-hidden">
+          <img
+            src={playlist.coverImage}
+            alt={playlist.title}
+            className="w-full h-full object-cover"
+          />
+        </div>
+      ) : (
+        <div className="w-10 h-10 rounded bg-muted flex items-center justify-center">
+          <LuMusic className="h-4 w-4 text-muted-foreground" />
+        </div>
+      )}
+    </TableCell>
+    <TableCell className="font-medium">{playlist.title}</TableCell>
+    <TableCell className="hidden md:table-cell">
+      {playlist.userId?.name || "Unknown Creator"}
+    </TableCell>
+    <TableCell className="hidden lg:table-cell">
+      {playlist.trackCount || 0} tracks
+    </TableCell>
+    <TableCell className="hidden xl:table-cell">
+      {playlist.followers || 0}
+    </TableCell>
+    <TableCell>
+      <Badge variant={playlist.isPublic ? "outline" : "secondary"}>
+        {playlist.isPublic ? "Public" : "Private"}
+      </Badge>
+    </TableCell>
+    <TableCell>
+      <Badge variant={playlist.isFeatured ? "default" : "outline"}>
+        {playlist.isFeatured ? "Featured" : "Regular"}
+      </Badge>
+    </TableCell>
+    <TableCell className="text-right">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <span className="sr-only">Open menu</span>
+            <LuMessageSquareMore className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+          <DropdownMenuItem onClick={() => onViewDetails(playlist._id)}>
+            View Details
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onEditPlaylist(playlist)}>
+            Edit Playlist
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onClick={() => onToggleVisibility(playlist._id, !playlist.isPublic)}
+          >
+            {playlist.isPublic ? "Make Private" : "Make Public"}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => onToggleFeatured(playlist._id, !playlist.isFeatured)}
+          >
+            {playlist.isFeatured ? "Unfeature Playlist" : "Feature Playlist"}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-red-600 focus:text-red-600"
+            onClick={() => onDeletePlaylist(playlist._id)}
+          >
+            Delete Playlist
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </TableCell>
+  </TableRow>
+);
+
 const PlaylistsPage = () => {
   const { data: session } = useSession();
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [isLoading, setIsLoading] = useState(false);
-  const [filteredPlaylists, setFilteredPlaylists] = useState<Playlist[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [currentPlaylistId, setCurrentPlaylistId] = useState("");
+  const [currentPlaylist, setCurrentPlaylist] = useState<Playlist | null>(null);
 
-  // Fetch playlists from the API
-  useEffect(() => {
-    const fetchPlaylists = async () => {
-      if (!session?.user?.access_token) return;
-
-      try {
-        setIsLoading(true);
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/playlists/all`,
-          {
-            headers: {
-              Authorization: `Bearer ${session.user.access_token}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        if (data.data) {
-          setPlaylists(data.data);
-        }
-      } catch (error) {
-        console.error("Error fetching playlists:", error);
-        toast.error("Failed to load playlist data");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPlaylists();
-  }, [session]);
-
-  // Filter playlists based on search and filters
-  useEffect(() => {
-    if (playlists.length > 0) {
-      const filtered = playlists.filter((playlist) => {
-        const matchesSearch =
-          playlist.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          playlist.userId?.name
-            ?.toLowerCase()
-            .includes(searchQuery.toLowerCase()) ||
-          false;
-        const matchesStatus =
-          statusFilter === "all" ||
-          (statusFilter === "featured"
-            ? playlist.isFeatured === true
-            : statusFilter === "public"
-              ? playlist.isPublic === true
-              : statusFilter === "private"
-                ? playlist.isPublic === false
-                : true);
-        return matchesSearch && matchesStatus;
-      });
-      setFilteredPlaylists(filtered);
-    }
-  }, [playlists, searchQuery, statusFilter]);
-
-  const handlePlaylistAction = async (action: string, playlistId: string) => {
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPlaylists, setTotalPlaylists] = useState(0);
+  const playlistsPerPage = 10;
+  const totalPages = Math.ceil(totalPlaylists / playlistsPerPage);
+  const fetchPlaylists = async () => {
     if (!session?.user?.access_token) return;
 
     try {
-      console.log(`${action} playlist with ID ${playlistId}`);
-
-      if (action === "delete") {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/playlists/${playlistId}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${session.user.access_token}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Failed to delete playlist: ${response.status}`);
+      setIsLoading(true);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/playlists/all`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.user.access_token}`,
+          },
         }
+      );
 
-        setPlaylists(
-          playlists.filter((playlist) => playlist._id !== playlistId)
-        );
-        toast.success("Playlist deleted successfully");
-      } else if (action === "feature" || action === "unfeature") {
-        const isFeatured = action === "feature";
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/playlists/${playlistId}/feature`,
-          {
-            method: "PATCH",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session.user.access_token}`,
-            },
-            body: JSON.stringify({ isFeatured }),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(
-            `Failed to update playlist featured status: ${response.status}`
-          );
-        }
-
-        setPlaylists(
-          playlists.map((playlist) =>
-            playlist._id === playlistId ? { ...playlist, isFeatured } : playlist
-          )
-        );
-        toast.success(
-          `Playlist ${isFeatured ? "featured" : "unfeatured"} successfully`
-        );
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
+      const data = await response.json(); // Handle different API response structures
+      let playlistsArray = [];
+      if (
+        data &&
+        data.data &&
+        data.data.data &&
+        Array.isArray(data.data.data)
+      ) {
+        // Handle nested data.data.data structure (like your response)
+        playlistsArray = data.data.data;
+        setTotalPlaylists(data.data.totalCount || data.data.data.length);
+      } else if (data && data.data && data.data.playlists) {
+        playlistsArray = data.data.playlists;
+        setTotalPlaylists(data.data.totalCount || data.data.playlists.length);
+      } else if (data && Array.isArray(data.data)) {
+        playlistsArray = data.data;
+        setTotalPlaylists(data.totalCount || data.data.length);
+      } else if (data && Array.isArray(data)) {
+        playlistsArray = data;
+        setTotalPlaylists(data.length);
+      } else {
+        console.error("Unexpected data structure:", data);
+        toast.error("Invalid data format received");
+        return;
+      } // Transform the data to match the interface
+      const transformedPlaylists = playlistsArray.map((playlist: any) => ({
+        ...playlist,
+        title: playlist.name || playlist.title, // Map name to title
+        trackCount: playlist.songCount || playlist.songs?.length || 0,
+        followers: playlist.followersCount || 0, // Map followersCount to followers
+        isPublic: playlist.visibility === "PUBLIC",
+      }));
+
+      setPlaylists(transformedPlaylists);
     } catch (error) {
-      console.error(`Error ${action} playlist:`, error);
-      toast.error(`Failed to ${action} playlist`);
+      console.error("Error fetching playlists:", error);
+      toast.error("Failed to load playlist data");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getDefaultCoverImage = () => {
-    return "/default-profile.jpg"; // Use a playlist default image
+  useEffect(() => {
+    fetchPlaylists();
+  }, [session, currentPage]);
+
+  // Filter playlists based on search query and filters
+  const filteredPlaylists = useMemo(() => {
+    return playlists.filter((playlist) => {
+      const matchesSearch =
+        !searchQuery ||
+        playlist.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        playlist.userId?.name
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        playlist.description
+          ?.toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
+        false;
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "featured" && playlist.isFeatured === true) ||
+        (statusFilter === "public" && playlist.isPublic === true) ||
+        (statusFilter === "private" && playlist.isPublic === false);
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [playlists, searchQuery, statusFilter]);
+
+  // Handle viewing playlist details
+  const handleViewDetails = (playlistId: string) => {
+    const playlist = playlists.find((p) => p._id === playlistId);
+    if (playlist) {
+      setCurrentPlaylist(playlist);
+      // In production, you would navigate to playlist detail page
+      console.log("View playlist details:", playlist);
+      toast.info(`Viewing details for playlist: ${playlist.title}`);
+    }
+  };
+
+  // Handle editing a playlist
+  const handleEditPlaylist = (playlist: Playlist) => {
+    setCurrentPlaylist(playlist);
+    setIsEditDialogOpen(true);
+  };
+
+  // Handle submitting edited playlist
+  const handleSubmitEdit = async () => {
+    if (!currentPlaylist || !session?.user?.access_token) return;
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/playlists/${currentPlaylist._id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.user.access_token}`,
+          },
+          body: JSON.stringify({
+            name: currentPlaylist.title,
+            description: currentPlaylist.description,
+            visibility: currentPlaylist.isPublic ? "PUBLIC" : "PRIVATE",
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      toast.success("Playlist updated successfully");
+      setIsEditDialogOpen(false);
+      fetchPlaylists(); // Refresh the playlists list
+    } catch (error) {
+      console.error("Error updating playlist:", error);
+      toast.error("Failed to update playlist");
+    }
+  };
+
+  // Handle toggling playlist visibility
+  const handleToggleVisibility = async (
+    playlistId: string,
+    isPublic: boolean
+  ) => {
+    if (!session?.user?.access_token) return;
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/playlists/${playlistId}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.user.access_token}`,
+          },
+          body: JSON.stringify({ visibility: isPublic ? "PUBLIC" : "PRIVATE" }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      toast.success(`Playlist is now ${isPublic ? "public" : "private"}`);
+      fetchPlaylists(); // Refresh the playlists list
+    } catch (error) {
+      console.error("Error updating playlist visibility:", error);
+      toast.error("Failed to update playlist visibility");
+    }
+  };
+
+  // Handle featuring/unfeaturing a playlist
+  const handleToggleFeatured = async (
+    playlistId: string,
+    isFeatured: boolean
+  ) => {
+    if (!session?.user?.access_token) return;
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/playlists/${playlistId}/featured`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.user.access_token}`,
+          },
+          body: JSON.stringify({ isFeatured }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      toast.success(
+        isFeatured
+          ? "Playlist is now featured"
+          : "Playlist is no longer featured"
+      );
+      fetchPlaylists(); // Refresh the playlists list
+    } catch (error) {
+      console.error("Error updating playlist featured status:", error);
+      toast.error("Failed to update featured status");
+    }
+  };
+
+  // Handle deleting a playlist
+  const handleDeletePlaylist = (playlistId: string) => {
+    setCurrentPlaylistId(playlistId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeletePlaylist = async () => {
+    if (!currentPlaylistId || !session?.user?.access_token) return;
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/playlists/${currentPlaylistId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session.user.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      toast.success("Playlist deleted successfully");
+      setPlaylists(
+        playlists.filter((playlist) => playlist._id !== currentPlaylistId)
+      );
+    } catch (error) {
+      console.error("Error deleting playlist:", error);
+      toast.error("Failed to delete playlist");
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setCurrentPlaylistId("");
+    }
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Playlist Management
-        </h1>
-        <Button onClick={() => console.log("Create new playlist")}>
-          Create New Playlist
-        </Button>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Playlists</h2>
+          <p className="text-muted-foreground">
+            Manage curated music playlists across your platform.
+          </p>
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Input
-          placeholder="Search by title or creator"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        <select
-          className="w-full p-2 border rounded-md"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-        >
-          <option value="all">All Playlists</option>
-          <option value="featured">Featured</option>
-          <option value="public">Public</option>
-          <option value="private">Private</option>
-        </select>
+      {/* Search and Filter UI */}
+      <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
+        <div className="relative flex-1">
+          <LuSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search playlists by title or creator..."
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="featured">Featured</SelectItem>
+            <SelectItem value="public">Public</SelectItem>
+            <SelectItem value="private">Private</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button onClick={fetchPlaylists}>Refresh</Button>
       </div>
 
       {/* Playlists Table */}
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Playlist
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Creator
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Tracks
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[60px]"></TableHead>
+                <TableHead>Title</TableHead>
+                <TableHead className="hidden md:table-cell">Creator</TableHead>
+                <TableHead className="hidden lg:table-cell">Tracks</TableHead>
+                <TableHead className="hidden xl:table-cell">
                   Followers
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Status
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Created
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+                </TableHead>
+                <TableHead>Visibility</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {isLoading ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center">
-                    Loading...
-                  </td>
-                </tr>
-              ) : filteredPlaylists.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center">
-                    No playlists found
-                  </td>
-                </tr>
-              ) : (
+                // Loading state with skeletons
+                Array(5)
+                  .fill(0)
+                  .map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell>
+                        <Skeleton className="h-10 w-10 rounded" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-[150px]" />
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <Skeleton className="h-4 w-[120px]" />
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <Skeleton className="h-4 w-[80px]" />
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell">
+                        <Skeleton className="h-4 w-[50px]" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-16 rounded-full" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-5 w-16 rounded-full" />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Skeleton className="h-8 w-8 rounded-full ml-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+              ) : filteredPlaylists.length > 0 ? (
                 filteredPlaylists.map((playlist) => (
-                  <tr key={playlist._id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <img
-                            className="h-10 w-10 rounded"
-                            src={playlist.coverImage || getDefaultCoverImage()}
-                            alt={playlist.title}
-                          />
-                        </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {playlist.title}
-                          </div>
-                          {playlist.description && (
-                            <div className="text-xs text-gray-500 truncate max-w-xs">
-                              {playlist.description}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {playlist.userId ? (
-                          <Link
-                            href={`/profile/${playlist.userId._id}`}
-                            className="hover:text-blue-600"
-                          >
-                            {playlist.userId.name}
-                          </Link>
-                        ) : (
-                          "Unknown Creator"
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {playlist.trackCount || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {playlist.followers?.toLocaleString() || 0}
-                      <div className="text-xs text-gray-400">
-                        {playlist.likes?.toLocaleString() || 0} likes
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-1">
-                        {playlist.isFeatured && (
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
-                            Featured
-                          </span>
-                        )}
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                          ${playlist.isPublic ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}`}
-                        >
-                          {playlist.isPublic ? "Public" : "Private"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(playlist.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
-                            <svg
-                              className="h-5 w-5"
-                              xmlns="http://www.w3.org/2000/svg"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"
-                              />
-                            </svg>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              window.open(`/playlist/${playlist._id}`, "_blank")
-                            }
-                          >
-                            View Playlist
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() =>
-                              console.log("Edit playlist", playlist._id)
-                            }
-                          >
-                            Edit Details
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          {!playlist.isFeatured ? (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handlePlaylistAction("feature", playlist._id)
-                              }
-                              className="text-purple-600"
-                            >
-                              Feature Playlist
-                            </DropdownMenuItem>
-                          ) : (
-                            <DropdownMenuItem
-                              onClick={() =>
-                                handlePlaylistAction("unfeature", playlist._id)
-                              }
-                              className="text-green-600"
-                            >
-                              Unfeature Playlist
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            onClick={() =>
-                              handlePlaylistAction("delete", playlist._id)
-                            }
-                            className="text-red-600"
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
+                  <PlaylistRow
+                    key={playlist._id}
+                    playlist={playlist}
+                    onViewDetails={handleViewDetails}
+                    onEditPlaylist={handleEditPlaylist}
+                    onDeletePlaylist={handleDeletePlaylist}
+                    onToggleVisibility={handleToggleVisibility}
+                    onToggleFeatured={handleToggleFeatured}
+                  />
                 ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-6">
+                    No playlists found matching the current filters.
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-        <div className="px-6 py-4 flex items-center justify-between border-t border-gray-200">
-          <div className="text-sm text-gray-500">
-            Showing{" "}
-            <span className="font-medium">{filteredPlaylists.length}</span>{" "}
-            playlists
+      {/* Pagination controls */}
+      {totalPages > 1 && (
+        <div className="flex justify-center space-x-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          <div className="flex items-center space-x-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((page) => {
+                // Show only nearby pages when there are many pages
+                if (totalPages <= 5) return true;
+                return (
+                  page === 1 ||
+                  page === totalPages ||
+                  (page >= currentPage - 1 && page <= currentPage + 1)
+                );
+              })
+              .map((page, index, array) => {
+                // Add ellipsis
+                if (index > 0 && page > array[index - 1] + 1) {
+                  return (
+                    <div key={`ellipsis-${page}`} className="flex space-x-1">
+                      <span className="flex items-center justify-center px-2">
+                        ...
+                      </span>
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        className="w-8 h-8 p-0"
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </Button>
+                    </div>
+                  );
+                }
+                return (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    className="w-8 h-8 p-0"
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </Button>
+                );
+              })}
           </div>
-          <div className="flex-1 flex justify-end">
-            <Button disabled className="mr-3">
-              Previous
-            </Button>
-            <Button>Next</Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+            }
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
         </div>
-      </div>
+      )}
+
+      {/* Delete Playlist Confirmation Dialog */}
+      <AlertDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this playlist? This action cannot
+              be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive"
+              onClick={confirmDeletePlaylist}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Playlist Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Playlist</DialogTitle>
+            <DialogDescription>
+              Update playlist information and settings.
+            </DialogDescription>
+          </DialogHeader>
+          {currentPlaylist && (
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-sm">Title</label>
+                <Input
+                  className="col-span-3"
+                  value={currentPlaylist.title || ""}
+                  onChange={(e) =>
+                    setCurrentPlaylist({
+                      ...currentPlaylist,
+                      title: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-sm">Description</label>
+                <Textarea
+                  className="col-span-3"
+                  value={currentPlaylist.description || ""}
+                  onChange={(e) =>
+                    setCurrentPlaylist({
+                      ...currentPlaylist,
+                      description: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-sm">Visibility</label>
+                <Select
+                  value={currentPlaylist.isPublic ? "public" : "private"}
+                  onValueChange={(value) =>
+                    setCurrentPlaylist({
+                      ...currentPlaylist,
+                      isPublic: value === "public",
+                    })
+                  }
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select visibility" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="public">Public</SelectItem>
+                    <SelectItem value="private">Private</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <label className="text-right text-sm">Featured</label>
+                <Select
+                  value={currentPlaylist.isFeatured ? "featured" : "regular"}
+                  onValueChange={(value) =>
+                    setCurrentPlaylist({
+                      ...currentPlaylist,
+                      isFeatured: value === "featured",
+                    })
+                  }
+                >
+                  <SelectTrigger className="col-span-3">
+                    <SelectValue placeholder="Select featured status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="featured">Featured</SelectItem>
+                    <SelectItem value="regular">Regular</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleSubmitEdit}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

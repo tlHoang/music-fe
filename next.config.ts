@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
       "images.unsplash.com",
       "plus.unsplash.com",
       "localhost",
+      "storage.googleapis.com",
     ],
   },
 };

@@ -1,0 +1,280 @@
+"use client";
+
+import { signOut } from "next-auth/react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import { useSession } from "next-auth/react";
+import {
+  LuLayoutDashboard,
+  LuUsers,
+  LuMusic,
+  LuListMusic,
+  LuActivity,
+  LuFlag,
+  LuSettings,
+  LuLogOut,
+} from "react-icons/lu";
+import { Button } from "@/components/ui/button";
+import { ModeToggle } from "@/components/ui/mode-toggle";
+
+interface AdminLayoutClientProps {
+  children: React.ReactNode;
+}
+
+// Client-side layout wrapper with navigation highlights
+export const AdminLayoutClient = ({ children }: AdminLayoutClientProps) => {
+  const pathname = usePathname();
+  const { data: session } = useSession();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Navigation items
+  const navItems = [
+    {
+      icon: LuLayoutDashboard,
+      title: "Dashboard",
+      href: "/admin",
+      active: pathname === "/admin",
+    },
+    {
+      icon: LuUsers,
+      title: "Users",
+      href: "/admin/users",
+      active: pathname === "/admin/users",
+    },
+    {
+      icon: LuMusic,
+      title: "Tracks",
+      href: "/admin/tracks",
+      active: pathname === "/admin/tracks",
+    },
+    {
+      icon: LuListMusic,
+      title: "Playlists",
+      href: "/admin/playlists",
+      active: pathname === "/admin/playlists",
+    },
+    {
+      icon: LuActivity,
+      title: "Analytics",
+      href: "/admin/analytics",
+      active: pathname === "/admin/analytics",
+    },
+    {
+      icon: LuFlag,
+      title: "Reports",
+      href: "/admin/reports",
+      active: pathname === "/admin/reports",
+    },
+    {
+      icon: LuSettings,
+      title: "Settings",
+      href: "/admin/settings",
+      active: pathname === "/admin/settings",
+    },
+  ];
+
+  return (
+    <div className="flex h-screen bg-background">
+      {/* Sidebar for larger screens */}
+      <aside className="hidden md:flex md:w-64 lg:w-72 flex-col border-r bg-card">
+        <div className="p-6">
+          <Link
+            href="/admin"
+            className="flex items-center space-x-2 font-bold text-xl"
+          >
+            <span>Sound App</span>
+            <span className="bg-primary text-primary-foreground px-1.5 py-0.5 rounded-md text-xs font-medium">
+              Admin
+            </span>
+          </Link>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto py-4 px-2">
+          <ul className="space-y-1">
+            {navItems.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className={`flex items-center px-4 py-3 rounded-md transition-colors ${
+                    item.active
+                      ? "bg-primary/10 text-primary font-medium"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  <item.icon className="mr-3 h-5 w-5" />
+                  <span>{item.title}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* Logout Button */}
+        {/* <form
+          action={async () => {
+            "use server";
+            const { signOut } = await import("@/auth");
+            await signOut({ redirectTo: "/login" });
+
+          }}
+          className="mt-auto mb-6 px-2"
+        > */}
+        <button
+          type="submit"
+          className="flex items-center px-6 py-3 w-full text-left rounded-md text-red-500 hover:bg-red-500/10 transition-colors"
+          onClick={() => signOut()}
+        >
+          <LuLogOut className="mr-3 h-5 w-5" />
+          <span>Log Out</span>
+        </button>
+        {/* </form> */}
+      </aside>{" "}
+      {/* Header and main content */}
+      <div className="flex flex-1 flex-col overflow-hidden h-screen">
+        {/* Header with mobile menu and user info */}
+        <header className="border-b bg-card">
+          <div className="flex h-16 items-center px-4 sm:px-6">
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="mr-4 md:hidden"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-6 w-6"
+              >
+                <line x1="4" x2="20" y1="12" y2="12" />
+                <line x1="4" x2="20" y1="6" y2="6" />
+                <line x1="4" x2="20" y1="18" y2="18" />
+              </svg>
+              <span className="sr-only">Toggle Menu</span>
+            </button>
+
+            <h2 className="font-semibold mr-auto text-lg md:hidden">
+              Sound App Admin
+            </h2>
+
+            {/* User Profile and Theme Toggle */}
+            <div className="ml-auto flex items-center space-x-4">
+              <ModeToggle />
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-medium hidden sm:inline-block">
+                  {session?.user?.name || session?.user?.email || "Admin User"}
+                </span>
+                {/* <form
+                  action={async () => {
+                    "use server";
+                    const { signOut } = await import("@/auth");
+                    await signOut({ redirectTo: "/login" });
+                  }}
+                > */}
+                <Button
+                  type="submit"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => signOut()}
+                >
+                  Log out
+                </Button>
+                {/* </form> */}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Mobile navigation */}
+        {isMobileMenuOpen && (
+          <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm md:hidden">
+            <div className="fixed inset-y-0 left-0 w-3/4 max-w-xs bg-card shadow-lg">
+              <div className="flex h-full flex-col">
+                {/* Logo */}
+                <div className="p-6 flex justify-between items-center">
+                  <Link href="/admin" className="font-bold text-xl">
+                    Sound App Admin
+                  </Link>
+                  <button
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="rounded-md p-1.5 hover:bg-muted transition-colors"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="24"
+                      height="24"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="h-5 w-5"
+                    >
+                      <path d="M18 6 6 18" />
+                      <path d="m6 6 12 12" />
+                    </svg>
+                    <span className="sr-only">Close Menu</span>
+                  </button>
+                </div>
+
+                {/* Mobile navigation links */}
+                <nav className="flex-1 overflow-y-auto py-4 px-3">
+                  <ul className="space-y-1">
+                    {navItems.map((item) => (
+                      <li key={item.href}>
+                        <Link
+                          href={item.href}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className={`flex items-center px-4 py-3 rounded-md transition-colors ${
+                            item.active
+                              ? "bg-primary/10 text-primary font-medium"
+                              : "hover:bg-muted"
+                          }`}
+                        >
+                          <item.icon className="mr-3 h-5 w-5" />
+                          <span>{item.title}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+
+                {/* Mobile Logout Button */}
+                <div className="mt-auto p-4">
+                  {/* <form
+                    action={async () => {
+                      "use server";
+                      const { signOut } = await import("@/auth");
+                      await signOut({ redirectTo: "/login" });
+                    }}
+                  > */}
+                  <Button
+                    type="submit"
+                    variant="destructive"
+                    className="w-full"
+                    onClick={() => signOut()}
+                  >
+                    <LuLogOut className="mr-2 h-4 w-4" />
+                    Log Out
+                  </Button>
+                  {/* </form> */}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+          {children}
+        </main>
+      </div>
+    </div>
+  );
+};

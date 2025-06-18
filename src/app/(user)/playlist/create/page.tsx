@@ -18,16 +18,63 @@ import { toast } from "sonner";
 export default function CreatePlaylistPage() {
   const { data: session } = useSession();
   const router = useRouter();
-
   const [formData, setFormData] = useState({
     name: "",
     visibility: "PUBLIC",
   });
   const [loading, setLoading] = useState(false);
-
+  const [selectedCoverFile, setSelectedCoverFile] = useState<File | null>(null);
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please select an image file");
+        return;
+      }
+      // Validate file size (2MB limit)
+      if (file.size > 2 * 1024 * 1024) {
+        toast.error("Image must be less than 2MB");
+        return;
+      }
+      setSelectedCoverFile(file);
+    }
+  };
+
+  const uploadCoverForPlaylist = async (
+    playlistId: string,
+    coverFile: File
+  ): Promise<string | null> => {
+    try {
+      const formData = new FormData();
+      formData.append("cover", coverFile);
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/playlists/${playlistId}/cover`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session?.user?.access_token}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to upload cover");
+      }
+
+      const result = await response.json();
+      return result.coverUrl || result.data?.coverUrl || null;
+    } catch (error) {
+      console.error("Error uploading cover:", error);
+      return null;
+    }
   };
 
   const handleVisibilityChange = (value: string) => {
@@ -72,11 +119,11 @@ export default function CreatePlaylistPage() {
       // Check for different response formats
       if (response.ok) {
         let playlistId;
-        
+
         // Handle direct _id return format
         if (data._id) {
           playlistId = data._id;
-        } 
+        }
         // Handle nested data structure format
         else if (data.data && data.data._id) {
           playlistId = data.data._id;
@@ -85,14 +132,27 @@ export default function CreatePlaylistPage() {
         else if (data.success && data.success.data && data.success.data._id) {
           playlistId = data.success.data._id;
         }
-        
         if (playlistId) {
-          toast.success("Playlist created successfully!");
+          // If there's a cover file, upload it after playlist creation
+          if (selectedCoverFile) {
+            try {
+              await uploadCoverForPlaylist(playlistId, selectedCoverFile);
+              toast.success("Playlist created with cover successfully!");
+            } catch (coverError) {
+              // Playlist was created but cover upload failed
+              toast.success(
+                "Playlist created successfully! Cover upload failed - you can add it later."
+              );
+            }
+          } else {
+            toast.success("Playlist created successfully!");
+          }
+
           router.push(`/playlist/${playlistId}`);
           return;
         }
       }
-      
+
       // If we got here, something went wrong
       throw new Error(data.message || "Failed to create playlist");
     } catch (error) {
@@ -109,6 +169,7 @@ export default function CreatePlaylistPage() {
         <h1 className="text-2xl font-bold mb-6">Create New Playlist</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {" "}
           <div className="space-y-2">
             <Label htmlFor="name">Playlist Name</Label>
             <Input
@@ -119,8 +180,28 @@ export default function CreatePlaylistPage() {
               placeholder="My Awesome Playlist"
               required
             />
+          </div>{" "}
+          <div className="space-y-2">
+            <Label>Playlist Cover (Optional)</Label>
+            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4">
+              <div className="text-center">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  Upload a cover image for your playlist
+                </p>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100"
+                />
+                {selectedCoverFile && (
+                  <p className="text-sm text-green-600 mt-2">
+                    Selected: {selectedCoverFile.name}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="visibility">Visibility</Label>
             <Select
@@ -131,12 +212,15 @@ export default function CreatePlaylistPage() {
                 <SelectValue placeholder="Select visibility" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="PUBLIC">Public - Anyone can listen</SelectItem>
-                <SelectItem value="PRIVATE">Private - Only you can listen</SelectItem>
+                <SelectItem value="PUBLIC">
+                  Public - Anyone can listen
+                </SelectItem>
+                <SelectItem value="PRIVATE">
+                  Private - Only you can listen
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
-
           <div className="flex justify-end gap-3 pt-4">
             <Button
               type="button"

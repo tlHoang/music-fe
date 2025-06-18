@@ -19,6 +19,7 @@ interface FeaturedPlaylist {
   visibility: string;
   isFeatured: boolean;
   createdAt: string;
+  cover?: string;
 }
 
 export default function FeaturedPlaylists() {
@@ -251,9 +252,18 @@ export default function FeaturedPlaylists() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {playlists.map((playlist) => (
           <Link key={playlist._id} href={`/playlist/${playlist._id}`}>
+            {" "}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-md transition-shadow group cursor-pointer h-full flex flex-col">
               <div className="bg-gradient-to-br from-purple-400 to-indigo-600 aspect-square rounded-md mb-3 flex items-center justify-center text-white text-4xl relative overflow-hidden">
-                {playlist.name?.charAt(0).toUpperCase() || "P"}
+                {playlist.cover ? (
+                  <img
+                    src={playlist.cover}
+                    alt={playlist.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  playlist.name?.charAt(0).toUpperCase() || "P"
+                )}
                 <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-20 transition-opacity flex items-center justify-center">
                   <Library className="h-12 w-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>

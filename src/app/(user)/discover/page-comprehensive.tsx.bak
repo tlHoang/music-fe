@@ -1,0 +1,533 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { sendRequest } from "@/utils/api";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import Link from "next/link";
+import Image from "next/image";
+import { Search, Music, Library, Play, Pause, Plus, Heart, Users } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { usePlayer } from "@/components/app/player-context";
+import FollowPlaylistButton from "@/components/user/playlist/follow-playlist-button";
+
+interface User {
+  _id: string;
+  name?: string;
+  email: string;
+  avatar?: string;
+  followersCount: number;
+  tracksCount: number;
+  isFollowing?: boolean;
+}
+
+interface Track {
+  _id: string;
+  title: string;
+  audioUrl: string;
+  visibility: string;
+  userId: string;
+  duration: number;
+  uploadDate: string;
+  playCount?: number;
+  genre?: string;
+  cover?: string;
+  user: {
+    _id: string;
+    name: string;
+    username: string;
+    profilePicture?: string;
+  };
+}
+
+interface PlaylistUser {
+  _id: string;
+  name: string;
+  username: string;
+  profilePicture?: string;
+}
+
+interface Playlist {
+  _id: string;
+  name: string;
+  userId: PlaylistUser;
+  songs: string[];
+  visibility: string;
+  isFeatured: boolean;
+  createdAt: string;
+  followersCount?: number;
+}
+
+const DiscoverPage = () => {
+  const { data: session } = useSession();
+  const [users, setUsers] = useState<User[]>([]);
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [filteredTracks, setFilteredTracks] = useState<Track[]>([]);
+  const [filteredPlaylists, setFilteredPlaylists] = useState<Playlist[]>([]);
+  const [loading, setLoading] = useState({ users: true, tracks: true, playlists: true });
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeTab, setActiveTab] = useState("tracks");
+  const [followUpdates, setFollowUpdates] = useState<Record<string, boolean>>({});
+
+  const { playTrack, currentTrack, isPlaying, togglePlayPause } = usePlayer();
+
+  useEffect(() => {
+    fetchUsers();
+    fetchTracks();
+    fetchPlaylists();
+  }, [session]);
+
+  // Filter based on search query
+  useEffect(() => {
+    const query = searchQuery.toLowerCase();
+    
+    if (!query.trim()) {
+      setFilteredTracks(tracks);
+      setFilteredPlaylists(playlists);
+      return;
+    }
+
+    const filteredTracksResult = tracks.filter(track => 
+      track.title.toLowerCase().includes(query) ||
+      track.user?.name?.toLowerCase().includes(query) ||
+      track.user?.username?.toLowerCase().includes(query) ||
+      track.genre?.toLowerCase().includes(query)
+    );
+
+    const filteredPlaylistsResult = playlists.filter(playlist => 
+      playlist.name.toLowerCase().includes(query) ||
+      playlist.userId?.name?.toLowerCase().includes(query) ||
+      playlist.userId?.username?.toLowerCase().includes(query)
+    );
+
+    setFilteredTracks(filteredTracksResult);
+    setFilteredPlaylists(filteredPlaylistsResult);
+  }, [searchQuery, tracks, playlists]);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(prev => ({ ...prev, users: true }));
+      setError(null);
+
+      const response = await sendRequest<any>({
+        url: `${process.env.NEXT_PUBLIC_API_URL}/users/discover`,
+        headers: session?.user?.access_token
+          ? { Authorization: `Bearer ${session.user.access_token}` }
+          : undefined,
+        method: "GET",
+      });
+
+      if (response.data) {
+        const initialFollowStates: Record<string, boolean> = {};
+        response.data.forEach((user: User) => {
+          initialFollowStates[user._id] = !!user.isFollowing;
+        });
+        setFollowUpdates(initialFollowStates);
+        setUsers(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      setError("Failed to load artists. Please try again later.");
+    } finally {
+      setLoading(prev => ({ ...prev, users: false }));
+    }
+  };
+
+  const fetchTracks = async () => {
+    try {
+      setLoading(prev => ({ ...prev, tracks: true }));
+      
+      const response = await sendRequest<any>({
+        url: `${process.env.NEXT_PUBLIC_API_URL}/songs/search?visibility=PUBLIC&limit=20`,
+        method: "GET",
+        headers: session?.user?.access_token
+          ? { Authorization: `Bearer ${session.user.access_token}` }
+          : {},
+      });
+
+      if (response.data && response.data.data) {
+        setTracks(response.data.data);
+        setFilteredTracks(response.data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching tracks:", error);
+      setError("Failed to load tracks. Please try again later.");
+    } finally {
+      setLoading(prev => ({ ...prev, tracks: false }));
+    }
+  };
+
+  const fetchPlaylists = async () => {
+    try {
+      setLoading(prev => ({ ...prev, playlists: true }));
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/playlists?visibility=PUBLIC`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch playlists");
+      }
+
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        setPlaylists(result.data);
+        setFilteredPlaylists(result.data);
+      } else {
+        setError(result.message || "Failed to load playlists");
+      }
+    } catch (error) {
+      console.error("Error fetching playlists:", error);
+      setError("An error occurred while loading playlists");
+    } finally {
+      setLoading(prev => ({ ...prev, playlists: false }));
+    }
+  };
+
+  const handleFollow = async (userId: string) => {
+    if (!session?.user?.access_token) {
+      window.location.href = "/login";
+      return;
+    }
+
+    try {
+      setFollowUpdates({ ...followUpdates, [userId]: true });
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/followers`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.user.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            followingId: userId,
+            followerId: session.user._id,
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (!data.data.success) {
+        setFollowUpdates({ ...followUpdates, [userId]: false });
+      }
+    } catch (error) {
+      console.error("Error following user:", error);
+      setFollowUpdates({ ...followUpdates, [userId]: false });
+    }
+  };
+
+  const handleUnfollow = async (userId: string) => {
+    if (!session?.user?.access_token) return;
+
+    try {
+      setFollowUpdates({ ...followUpdates, [userId]: false });
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/followers/${userId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session.user.access_token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!data.data.success) {
+        setFollowUpdates({ ...followUpdates, [userId]: true });
+      }
+    } catch (error) {
+      console.error("Error unfollowing user:", error);
+      setFollowUpdates({ ...followUpdates, [userId]: true });
+    }
+  };
+
+  const handlePlayTrack = (track: Track) => {
+    const audioUrl = track.audioUrl.startsWith("/api/audio")
+      ? track.audioUrl
+      : `/api/audio?url=${encodeURIComponent(track.audioUrl)}`;
+
+    playTrack({
+      ...track,
+      audioUrl,
+    });
+  };
+
+  const handlePlayToggle = (track: Track) => {
+    if (currentTrack?._id === track._id) {
+      togglePlayPause();
+    } else {
+      handlePlayTrack(track);
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = Math.floor(seconds % 60);
+    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+  };
+
+  const LoadingSkeleton = ({ type }: { type: 'tracks' | 'playlists' | 'users' }) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {Array(8).fill(0).map((_, i) => (
+        <div key={i} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+          <Skeleton className="h-36 w-full mb-3 rounded-md" />
+          <Skeleton className="h-6 w-3/4 mb-2" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      ))}
+    </div>
+  );
+
+  return (
+    <div className="container mx-auto p-6">
+      <div className="flex flex-col space-y-6">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <h1 className="text-3xl font-bold">Discover Music</h1>
+          <div className="relative w-full sm:w-96">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <Input
+              placeholder="Search tracks, playlists, and artists..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="tracks" className="flex items-center gap-2">
+              <Music size={16} />
+              Tracks ({filteredTracks.length})
+            </TabsTrigger>
+            <TabsTrigger value="playlists" className="flex items-center gap-2">
+              <Library size={16} />
+              Playlists ({filteredPlaylists.length})
+            </TabsTrigger>
+            <TabsTrigger value="artists" className="flex items-center gap-2">
+              <Users size={16} />
+              Artists ({users.length})
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Tracks Tab */}
+          <TabsContent value="tracks" className="space-y-4">
+            {loading.tracks ? (
+              <LoadingSkeleton type="tracks" />
+            ) : filteredTracks.length === 0 ? (
+              <div className="bg-gray-50 dark:bg-gray-800 p-8 rounded-lg text-center">
+                <Music className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No tracks found</h3>
+                <p className="text-gray-500 mb-4">
+                  {searchQuery 
+                    ? "No tracks match your search criteria." 
+                    : "There are no public tracks available at the moment."}
+                </p>
+                {searchQuery && (
+                  <Button onClick={() => setSearchQuery("")} variant="outline">
+                    Clear Search
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {filteredTracks.map((track) => (
+                  <div key={track._id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-md transition-shadow group">
+                    <div className="relative">
+                      <div className="bg-gradient-to-br from-blue-400 to-purple-600 aspect-square rounded-md mb-3 flex items-center justify-center text-white text-4xl relative overflow-hidden">
+                        {track.cover ? (
+                          <Image
+                            src={track.cover}
+                            alt={track.title}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          track.title?.charAt(0).toUpperCase() || "T"
+                        )}
+                        <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-50 transition-opacity flex items-center justify-center">
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => handlePlayToggle(track)}
+                          >
+                            {currentTrack?._id === track._id && isPlaying ? (
+                              <Pause size={16} />
+                            ) : (
+                              <Play size={16} />
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                    <Link href={`/track/${track._id}`}>
+                      <h3 className="font-semibold text-lg mb-1 line-clamp-1 hover:text-blue-600">
+                        {track.title}
+                      </h3>
+                    </Link>
+                    <Link href={`/profile/${track.user?._id}`}>
+                      <p className="text-sm text-gray-500 mb-2 line-clamp-1 hover:text-gray-700">
+                        By {track.user?.name || track.user?.username || "Unknown Artist"}
+                      </p>
+                    </Link>
+                    <div className="flex items-center justify-between text-sm text-gray-500">
+                      <span>{formatDuration(track.duration)}</span>
+                      <span>{track.playCount?.toLocaleString() || 0} plays</span>
+                    </div>
+                    {track.genre && (
+                      <span className="inline-block mt-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full">
+                        {track.genre}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Playlists Tab */}
+          <TabsContent value="playlists" className="space-y-4">
+            {loading.playlists ? (
+              <LoadingSkeleton type="playlists" />
+            ) : filteredPlaylists.length === 0 ? (
+              <div className="bg-gray-50 dark:bg-gray-800 p-8 rounded-lg text-center">
+                <Library className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No playlists found</h3>
+                <p className="text-gray-500 mb-4">
+                  {searchQuery 
+                    ? "No playlists match your search criteria." 
+                    : "There are no public playlists available at the moment."}
+                </p>
+                {searchQuery && (
+                  <Button onClick={() => setSearchQuery("")} variant="outline">
+                    Clear Search
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {filteredPlaylists.map((playlist) => (
+                  <div key={playlist._id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-md transition-shadow group h-full flex flex-col">
+                    <Link href={`/playlist/${playlist._id}`} className="flex-1">
+                      <div className="bg-gradient-to-br from-purple-400 to-indigo-600 aspect-square rounded-md mb-3 flex items-center justify-center text-white text-4xl relative overflow-hidden">
+                        {playlist.name?.charAt(0).toUpperCase() || "P"}
+                        <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-20 transition-opacity flex items-center justify-center">
+                          <Library className="h-12 w-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
+                      </div>
+                      <h3 className="font-semibold text-lg mb-1 line-clamp-1">
+                        {playlist.name}
+                      </h3>
+                      <p className="text-sm text-gray-500 mb-2 line-clamp-1">
+                        By {playlist.userId?.name || playlist.userId?.username || "Unknown"}
+                      </p>
+                      <div className="flex items-center text-sm text-gray-500 mb-3">
+                        <Music size={14} className="mr-1" />
+                        <span>{playlist.songs?.length || 0} songs</span>
+                        {playlist.followersCount !== undefined && (
+                          <>
+                            <span className="mx-2">•</span>
+                            <Heart size={14} className="mr-1" />
+                            <span>{playlist.followersCount} followers</span>
+                          </>
+                        )}
+                      </div>
+                    </Link>
+                    
+                    <div className="mt-auto pt-2">
+                      <FollowPlaylistButton
+                        playlistId={playlist._id}
+                        variant="button"
+                        size="sm"
+                        className="w-full"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Artists Tab */}
+          <TabsContent value="artists" className="space-y-4">
+            {loading.users ? (
+              <LoadingSkeleton type="users" />
+            ) : users.length === 0 ? (
+              <div className="bg-gray-50 dark:bg-gray-800 p-8 rounded-lg text-center">
+                <Users className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium mb-2">No artists found</h3>
+                <p className="text-gray-500">
+                  There are no artists available to discover at the moment.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {users.map((user) => (
+                  <div key={user._id} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow hover:shadow-md transition-shadow text-center">
+                    <Link href={`/profile/${user._id}`}>
+                      <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-400 to-blue-600 flex items-center justify-center text-white text-2xl font-bold">
+                        {user.avatar ? (
+                          <Image
+                            src={user.avatar}
+                            alt={user.name || user.email}
+                            width={80}
+                            height={80}
+                            className="rounded-full object-cover"
+                          />
+                        ) : (
+                          (user.name?.charAt(0) || user.email.charAt(0)).toUpperCase()
+                        )}
+                      </div>
+                      <h3 className="font-semibold text-lg mb-1 hover:text-blue-600">
+                        {user.name || user.email}
+                      </h3>
+                    </Link>
+                    <div className="text-sm text-gray-500 mb-4 space-y-1">
+                      <div className="flex items-center justify-center gap-4">
+                        <span>{user.followersCount || 0} followers</span>
+                        <span>{user.tracksCount || 0} tracks</span>
+                      </div>
+                    </div>
+                    {session?.user?._id !== user._id && (
+                      <Button
+                        size="sm"
+                        variant={followUpdates[user._id] ? "outline" : "default"}
+                        onClick={() => 
+                          followUpdates[user._id] 
+                            ? handleUnfollow(user._id) 
+                            : handleFollow(user._id)
+                        }
+                        className="w-full"
+                      >
+                        {followUpdates[user._id] ? "Following" : "Follow"}
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md">
+            {error}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default DiscoverPage;

@@ -360,14 +360,30 @@ const MusicPlayer = ({
           {error}
         </div>
       )}
-      {/* Track info */}
+      {/* Track info with big visible rotating disk */}
       <div className="flex items-center mb-4">
-        <div className="w-16 h-16 min-w-16 rounded-md overflow-hidden mr-4">
-          <img
-            src={coverImage}
-            alt={title}
-            className="w-full h-full object-cover"
-          />
+        <div className="w-40 h-40 min-w-40 flex items-center justify-center mr-8 relative">
+          <div className="relative w-40 h-40">
+            <div
+              className={cn(
+                "absolute inset-0 rounded-full bg-gradient-to-br from-purple-400 to-indigo-500 border-8 border-white shadow-2xl flex items-center justify-center",
+                globalIsPlaying ? "animate-spin-slow" : ""
+              )}
+              style={{ zIndex: 1 }}
+            >
+              <img
+                src={coverImage}
+                alt={title}
+                className="w-28 h-28 object-cover rounded-full border-4 border-purple-200 shadow-lg"
+                style={{ zIndex: 2 }}
+              />
+              {/* Disk center */}
+              <span
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white border-4 border-purple-400 rounded-full shadow-lg"
+                style={{ zIndex: 3 }}
+              ></span>
+            </div>
+          </div>
         </div>
         <div className="flex-grow overflow-hidden">
           <h3 className="text-lg font-semibold truncate dark:text-white">

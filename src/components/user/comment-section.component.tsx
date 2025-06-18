@@ -133,7 +133,7 @@ export default function CommentSection({
             _id: session.user._id,
             // name: session.user.name,
             email: session.user.email,
-            // avatarUrl: session.user.image,
+            // avatarUrl: session.user.profilePicture,
             username: session.user.username,
           },
         };
@@ -226,16 +226,17 @@ export default function CommentSection({
       {session?.user ? (
         <form onSubmit={handleCommentSubmit} className="space-y-4">
           <div className="flex space-x-4">
+            {" "}
             <Avatar className="h-10 w-10">
+              {" "}
               <AvatarImage
-                src={session.user.image || "/default-profile.jpg"}
+                src={session.user.profilePicture || "/default-profile.jpg"}
                 alt={session.user.name || "User"}
               />
               <AvatarFallback>
                 {session.user.name?.[0].toLocaleUpperCase() || "U"}
               </AvatarFallback>
             </Avatar>
-
             <div className="space-y-2 flex-1">
               <div className="relative">
                 <Textarea

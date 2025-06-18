@@ -18,6 +18,7 @@ import {
 import Link from "next/link";
 import TrackCard from "@/components/user/track-card.component";
 import LikeButton from "@/components/user/like-button.component";
+import FollowPlaylistButton from "@/components/user/playlist/follow-playlist-button";
 import DraggablePlaylistTracks from "@/components/user/playlist/draggable-playlist-tracks";
 import { toast } from "sonner";
 
@@ -48,6 +49,7 @@ interface Playlist {
   isFeatured: boolean;
   createdAt: string;
   updatedAt: string;
+  cover?: string;
 }
 
 export default function PlaylistPage() {
@@ -224,11 +226,19 @@ export default function PlaylistPage() {
         {/* Playlist header */}
         <div className="p-6 md:p-8 bg-gradient-to-r from-purple-500 to-indigo-600 text-white">
           <div className="flex flex-col md:flex-row gap-6 items-center">
+            {" "}
             {/* Playlist cover */}
-            <div className="w-48 h-48 bg-gray-200 dark:bg-gray-700 rounded-md shadow-lg flex items-center justify-center text-5xl text-gray-400">
-              {playlist.name?.charAt(0).toUpperCase() || "P"}
+            <div className="w-48 h-48 bg-gray-200 dark:bg-gray-700 rounded-md shadow-lg flex items-center justify-center text-5xl text-gray-400 overflow-hidden">
+              {playlist.cover ? (
+                <img
+                  src={playlist.cover}
+                  alt={playlist.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                playlist.name?.charAt(0).toUpperCase() || "P"
+              )}
             </div>
-
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-3xl font-bold mb-2">{playlist.name}</h1>
 
@@ -263,7 +273,6 @@ export default function PlaylistPage() {
                   <PlayCircle size={18} className="mr-2" />
                   Play All
                 </Button>
-
                 <Button
                   onClick={playShuffled}
                   variant="outline"
@@ -271,11 +280,16 @@ export default function PlaylistPage() {
                 >
                   <Shuffle size={18} className="mr-2" />
                   Shuffle
-                </Button>
-
-                {/* Add like button for the playlist */}
-                {/* Implement LikeButton for playlists when available */}
-
+                </Button>{" "}
+                {/* Add follow and like buttons for the playlist */}
+                {!isOwner && (
+                  <FollowPlaylistButton
+                    playlistId={playlistId}
+                    variant="button"
+                    size="md"
+                    className="border-white text-black hover:bg-white/20"
+                  />
+                )}
                 {isOwner && (
                   <Link href={`/playlist/${playlistId}/edit`}>
                     <Button

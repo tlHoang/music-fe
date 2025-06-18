@@ -12,8 +12,7 @@ const UserHeader = () => {
       {/* Logo */}
       <div className="text-xl font-bold">
         <Link href="/homepage">Music Platform</Link>
-      </div>
-
+      </div>{" "}
       {/* Navigation Links */}
       <div className="hidden md:flex items-center space-x-6">
         <Link href="/homepage/feed" className="hover:text-blue-600 font-medium">
@@ -22,6 +21,12 @@ const UserHeader = () => {
         <Link href="/discover" className="hover:text-blue-600 font-medium">
           Discover
         </Link>
+        <Link
+          href="/playlists/followed"
+          className="hover:text-blue-600 font-medium"
+        >
+          Followed Playlists
+        </Link>
         <Link href="/player" className="hover:text-blue-600 font-medium">
           Player
         </Link>
@@ -29,7 +34,6 @@ const UserHeader = () => {
           Upload
         </Link>
       </div>
-
       {/* User Actions */}
       <div className="flex items-center space-x-4">
         <Link href="/profile/my-music" className="hover:text-blue-600">
@@ -42,7 +46,7 @@ const UserHeader = () => {
           Profile
         </Link>
         <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
+          onClick={() => signOut({ redirectTo: "/login" })}
           className="text-red-500 hover:text-red-700"
         >
           Logout

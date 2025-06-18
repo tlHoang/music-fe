@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { usePlayer } from "@/components/app/player-context";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
   Plus,
   SkipForward as PlayNext,
   ListPlus,
+  Flag,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import LikeButton from "./like-button.component";
 import AddToPlaylistButton from "./playlist/add-to-playlist-button";
+import FlagReportDialog from "./flag-report-dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSignedCoverUrl } from "./useSignedCoverUrl";
@@ -57,6 +59,8 @@ const TrackCard = ({
     addToQueue,
     addNextToQueue,
   } = usePlayer();
+
+  const [showFlagDialog, setShowFlagDialog] = useState(false);
 
   const isCurrentTrack = currentTrack?._id === track._id;
 
@@ -209,6 +213,7 @@ const TrackCard = ({
                 onClick={handlePlayNext}
                 className="flex items-center gap-2"
               >
+                {" "}
                 <PlayNext size={14} />
                 <span>Play Next</span>
               </DropdownMenuItem>
@@ -222,9 +227,31 @@ const TrackCard = ({
                   />
                 </DropdownMenuItem>
               )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowFlagDialog(true);
+                }}
+                className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+              >
+                <Flag size={14} />
+                <span>Report Track</span>
+              </DropdownMenuItem>{" "}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+
+        {/* Flag Report Dialog */}
+        {showFlagDialog && track._id && (
+          <FlagReportDialog
+            trackId={track._id}
+            trackTitle={track.title}
+            trackArtist={track.artist || "Unknown Artist"}
+            isOpen={showFlagDialog}
+            onClose={() => setShowFlagDialog(false)}
+          />
+        )}
       </div>
     );
   }
@@ -294,7 +321,7 @@ const TrackCard = ({
                 >
                   <PlayNext size={14} />
                   <span>Play Next</span>
-                </DropdownMenuItem>
+                </DropdownMenuItem>{" "}
                 <DropdownMenuSeparator />
                 {track._id && (
                   <DropdownMenuItem asChild className="cursor-pointer">
@@ -305,6 +332,17 @@ const TrackCard = ({
                     />
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowFlagDialog(true);
+                  }}
+                  className="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                >
+                  <Flag size={14} />
+                  <span>Report Track</span>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -320,12 +358,22 @@ const TrackCard = ({
               <LikeButton songId={track._id} size="sm" showCount={true} />
             )}
           </div>
-
           <div className="text-xs text-gray-500">
             {formatDuration(track.duration)}
-          </div>
+          </div>{" "}
         </div>
       </div>
+
+      {/* Flag Report Dialog */}
+      {showFlagDialog && track._id && (
+        <FlagReportDialog
+          trackId={track._id}
+          trackTitle={track.title}
+          trackArtist={track.artist || "Unknown Artist"}
+          isOpen={showFlagDialog}
+          onClose={() => setShowFlagDialog(false)}
+        />
+      )}
     </div>
   );
 };

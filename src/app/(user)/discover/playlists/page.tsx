@@ -23,6 +23,7 @@ interface Playlist {
   visibility: string;
   isFeatured: boolean;
   createdAt: string;
+  cover?: string;
 }
 
 export default function DiscoverPlaylistsPage() {
@@ -39,14 +40,16 @@ export default function DiscoverPlaylistsPage() {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/playlists?visibility=PUBLIC`);
-        
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/playlists?visibility=PUBLIC`
+        );
+
         if (!response.ok) {
           throw new Error("Failed to fetch playlists");
         }
 
         const result = await response.json();
-        
+
         if (result.success && result.data) {
           setPlaylists(result.data);
           setFilteredPlaylists(result.data);
@@ -73,12 +76,12 @@ export default function DiscoverPlaylistsPage() {
 
     const query = searchQuery.toLowerCase();
     const filtered = playlists.filter(
-      (playlist) => 
-        playlist.name.toLowerCase().includes(query) || 
+      (playlist) =>
+        playlist.name.toLowerCase().includes(query) ||
         playlist.userId.name.toLowerCase().includes(query) ||
         playlist.userId.username.toLowerCase().includes(query)
     );
-    
+
     setFilteredPlaylists(filtered);
   }, [searchQuery, playlists]);
 
@@ -92,16 +95,21 @@ export default function DiscoverPlaylistsPage() {
             <Skeleton className="h-10 w-32" />
           </div>
         </div>
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {Array(8).fill(0).map((_, i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-              <Skeleton className="h-48 w-full mb-3 rounded-md" />
-              <Skeleton className="h-6 w-3/4 mb-2" />
-              <Skeleton className="h-4 w-1/2 mb-2" />
-              <Skeleton className="h-4 w-1/4" />
-            </div>
-          ))}
+          {Array(8)
+            .fill(0)
+            .map((_, i) => (
+              <div
+                key={i}
+                className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow"
+              >
+                <Skeleton className="h-48 w-full mb-3 rounded-md" />
+                <Skeleton className="h-6 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-1/2 mb-2" />
+                <Skeleton className="h-4 w-1/4" />
+              </div>
+            ))}
         </div>
       </div>
     );
@@ -122,10 +130,13 @@ export default function DiscoverPlaylistsPage() {
     <div className="container mx-auto p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <h1 className="text-3xl font-bold">Discover Playlists</h1>
-        
+
         <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
           <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={18}
+            />
             <Input
               placeholder="Search playlists..."
               value={searchQuery}
@@ -133,7 +144,7 @@ export default function DiscoverPlaylistsPage() {
               className="pl-10"
             />
           </div>
-          
+
           <Link href="/playlist/create">
             <Button>
               <Plus size={16} className="mr-1" />
@@ -148,8 +159,8 @@ export default function DiscoverPlaylistsPage() {
           <Library className="mx-auto h-12 w-12 text-gray-400 mb-4" />
           <h3 className="text-lg font-medium mb-2">No playlists found</h3>
           <p className="text-gray-500 mb-4">
-            {searchQuery 
-              ? "No playlists match your search criteria." 
+            {searchQuery
+              ? "No playlists match your search criteria."
               : "There are no public playlists available at the moment."}
           </p>
           <Button onClick={() => setSearchQuery("")} variant="outline">
@@ -160,16 +171,30 @@ export default function DiscoverPlaylistsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {filteredPlaylists.map((playlist) => (
             <Link key={playlist._id} href={`/playlist/${playlist._id}`}>
+              {" "}
               <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-md transition-shadow group cursor-pointer h-full flex flex-col">
                 <div className="bg-gradient-to-br from-purple-400 to-indigo-600 aspect-square rounded-md mb-3 flex items-center justify-center text-white text-4xl relative overflow-hidden">
-                  {playlist.name?.charAt(0).toUpperCase() || "P"}
+                  {playlist.cover ? (
+                    <img
+                      src={playlist.cover}
+                      alt={playlist.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    playlist.name?.charAt(0).toUpperCase() || "P"
+                  )}
                   <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-20 transition-opacity flex items-center justify-center">
                     <Library className="h-12 w-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </div>
-                <h3 className="font-semibold text-lg mb-1 line-clamp-1">{playlist.name}</h3>
+                <h3 className="font-semibold text-lg mb-1 line-clamp-1">
+                  {playlist.name}
+                </h3>
                 <p className="text-sm text-gray-500 mb-2 line-clamp-1">
-                  By {playlist.userId?.name || playlist.userId?.username || "Unknown"}
+                  By{" "}
+                  {playlist.userId?.name ||
+                    playlist.userId?.username ||
+                    "Unknown"}
                 </p>
                 <div className="flex items-center text-sm text-gray-500 mt-auto">
                   <Music size={14} className="mr-1" />

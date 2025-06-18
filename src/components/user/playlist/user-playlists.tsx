@@ -14,6 +14,7 @@ interface PlaylistItem {
   visibility: string;
   isFeatured: boolean;
   createdAt: string;
+  cover?: string;
 }
 
 interface UserPlaylistsProps {
@@ -40,9 +41,9 @@ export default function UserPlaylists({
         setLoading(true);
         setError(null);
 
-        let endpoint = '';
+        let endpoint = "";
         let headers: HeadersInit = {};
-        
+
         // If viewing current user's playlists, use the user endpoint that includes private playlists
         if (isCurrentUser && session?.user?.access_token) {
           endpoint = `${process.env.NEXT_PUBLIC_API_URL}/playlists/user`;
@@ -55,13 +56,13 @@ export default function UserPlaylists({
         }
 
         const response = await fetch(endpoint, { headers });
-        
+
         if (!response.ok) {
           throw new Error("Failed to fetch playlists");
         }
 
         const result = await response.json();
-        
+
         if (result.success && result.data) {
           setPlaylists(result.data.slice(0, limit));
         } else {
@@ -92,13 +93,18 @@ export default function UserPlaylists({
           )}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array(4).fill(0).map((_, i) => (
-            <div key={i} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-              <Skeleton className="h-36 w-full mb-3 rounded-md" />
-              <Skeleton className="h-6 w-3/4 mb-2" />
-              <Skeleton className="h-4 w-1/2" />
-            </div>
-          ))}
+          {Array(4)
+            .fill(0)
+            .map((_, i) => (
+              <div
+                key={i}
+                className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow"
+              >
+                <Skeleton className="h-36 w-full mb-3 rounded-md" />
+                <Skeleton className="h-6 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ))}
         </div>
       </div>
     );
@@ -133,13 +139,17 @@ export default function UserPlaylists({
           <h3 className="text-lg font-medium mb-2">No playlists yet</h3>
           {isCurrentUser ? (
             <>
-              <p className="text-gray-500 mb-4">Create your first playlist to organize your favorite tracks.</p>
+              <p className="text-gray-500 mb-4">
+                Create your first playlist to organize your favorite tracks.
+              </p>
               <Link href="/playlist/create">
                 <Button>Create Playlist</Button>
               </Link>
             </>
           ) : (
-            <p className="text-gray-500">This user hasn't created any public playlists yet.</p>
+            <p className="text-gray-500">
+              This user hasn't created any public playlists yet.
+            </p>
           )}
         </div>
       </div>
@@ -161,14 +171,25 @@ export default function UserPlaylists({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {playlists.map((playlist) => (
           <Link key={playlist._id} href={`/playlist/${playlist._id}`}>
+            {" "}
             <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-md transition-shadow group cursor-pointer h-full flex flex-col">
               <div className="bg-gradient-to-br from-purple-400 to-indigo-600 aspect-square rounded-md mb-3 flex items-center justify-center text-white text-4xl relative overflow-hidden">
-                {playlist.name?.charAt(0).toUpperCase() || "P"}
+                {playlist.cover ? (
+                  <img
+                    src={playlist.cover}
+                    alt={playlist.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  playlist.name?.charAt(0).toUpperCase() || "P"
+                )}
                 <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-20 transition-opacity flex items-center justify-center">
                   <Library className="h-12 w-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
               </div>
-              <h3 className="font-semibold text-lg mb-1 line-clamp-1">{playlist.name}</h3>
+              <h3 className="font-semibold text-lg mb-1 line-clamp-1">
+                {playlist.name}
+              </h3>
               <div className="flex items-center text-sm text-gray-500 mt-auto">
                 <Music size={14} className="mr-1" />
                 <span>{playlist.songs?.length || 0} songs</span>
