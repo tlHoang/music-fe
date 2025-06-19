@@ -47,28 +47,31 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import { LuMessageSquareMore, LuSearch, LuFlag } from "react-icons/lu";
 
 interface Report {
   _id: string;
-  type: string; // CONTENT, ABUSE, COPYRIGHT, OTHER
-  status: string; // PENDING, RESOLVED, REJECTED
+  reason: string; // INAPPROPRIATE_CONTENT, COPYRIGHT_INFRINGEMENT, SPAM, HARASSMENT, OTHER
+  status: string; // PENDING, REVIEWED, DISMISSED
   description: string;
-  reporterId?: {
+  reportedBy?: {
     _id: string;
     name: string;
     profilePicture?: string;
   };
-  targetId?: string;
-  targetType?: string; // TRACK, PLAYLIST, USER, COMMENT
-  targetName?: string;
+  songId?: {
+    _id: string;
+    title: string;
+    artist: string;
+  };
   createdAt: string;
   updatedAt?: string;
-  resolvedBy?: {
+  reviewedBy?: {
     _id: string;
     name: string;
   };
-  resolution?: string;
+  reviewNotes?: string;
 }
 
 const ReportsPage = () => {
@@ -77,10 +80,10 @@ const ReportsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [statusFilter, setStatusFilter] = useState("all");  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [resolutionNote, setResolutionNote] = useState("");
+  const [flagTrack, setFlagTrack] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -107,10 +110,8 @@ const ReportsPage = () => {
 
       if (statusFilter !== "all") {
         queryParams.append("status", statusFilter);
-      }
-
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/admin/reports?${queryParams.toString()}`,
+      }      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/songs/admin/flag-reports?${queryParams.toString()}`,
         {
           headers: {
             Authorization: `Bearer ${session.user.access_token}`,
@@ -120,14 +121,17 @@ const ReportsPage = () => {
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      }      const data = await response.json();
 
       // Handle different API response structures
-      if (data && data.data && data.data.reports) {
+      if (data && data.data && data.data.data && data.data.data.reports) {
+        // Backend returns: { statusCode, message, data: { success, data: { reports, pagination } } }
+        setReports(data.data.data.reports);
+        setTotalReports(data.data.data.pagination?.total || data.data.data.reports.length);
+      } else if (data && data.data && data.data.reports) {
+        // Fallback: { data: { reports, pagination } }
         setReports(data.data.reports);
-        setTotalReports(data.data.totalCount || data.data.reports.length);
+        setTotalReports(data.data.pagination?.total || data.data.reports.length);
       } else if (data && Array.isArray(data.data)) {
         setReports(data.data);
         setTotalReports(data.totalCount || data.data.length);
@@ -149,18 +153,17 @@ const ReportsPage = () => {
   useEffect(() => {
     fetchReports();
   }, [session, currentPage, typeFilter, statusFilter]);
-
   // Filter reports based on search query
   const filteredReports = reports.filter((report) => {
     if (!searchQuery) return true;
 
     return (
       report.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.reporterId?.name
+      report.reportedBy?.name
         ?.toLowerCase()
         .includes(searchQuery.toLowerCase()) ||
-      report.targetName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      report.type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      report.songId?.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      report.reason?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       false
     );
   });
@@ -168,12 +171,11 @@ const ReportsPage = () => {
   // Format date
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
-  };
-
-  // View report details
+  };  // View report details
   const handleViewReport = (report: Report) => {
     setSelectedReport(report);
-    setResolutionNote(report.resolution || "");
+    setResolutionNote(report.reviewNotes || "");
+    setFlagTrack(false); // Reset flag track checkbox
     setIsDetailOpen(true);
   };
 
@@ -181,18 +183,17 @@ const ReportsPage = () => {
   const handleUpdateStatus = async (status: string) => {
     if (!selectedReport || !session?.user?.access_token) return;
 
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/admin/reports/${selectedReport._id}/status`,
+    try {      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/songs/admin/flag-reports/${selectedReport._id}/review`,
         {
-          method: "PUT",
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.user.access_token}`,
-          },
-          body: JSON.stringify({
+          },          body: JSON.stringify({
             status,
-            resolution: resolutionNote,
+            reviewNotes: resolutionNote,
+            flagSong: flagTrack, // Include the flag track option
           }),
         }
       );
@@ -201,13 +202,11 @@ const ReportsPage = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      toast.success(`Report marked as ${status.toLowerCase()}`);
-
-      // Update local state
+      toast.success(`Report marked as ${status.toLowerCase()}`);      // Update local state
       setReports(
         reports.map((report) =>
           report._id === selectedReport._id
-            ? { ...report, status, resolution: resolutionNote }
+            ? { ...report, status, reviewNotes: resolutionNote }
             : report
         )
       );
@@ -218,32 +217,33 @@ const ReportsPage = () => {
       toast.error("Failed to update report status");
     }
   };
+  // Get color for reason badge
+  const getReasonColor = (reason: string) => {
+    switch (reason) {
+      case "INAPPROPRIATE_CONTENT":
+        return "bg-red-100 text-red-800 border-red-300";
+      case "COPYRIGHT_INFRINGEMENT":
+        return "bg-purple-100 text-purple-800 border-purple-300";
+      case "SPAM":
+        return "bg-yellow-100 text-yellow-800 border-yellow-300";
+      case "HARASSMENT":
+        return "bg-orange-100 text-orange-800 border-orange-300";
+      case "OTHER":
+        return "bg-gray-100 text-gray-800 border-gray-300";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-300";
+    }
+  };
 
   // Get color for status badge
   const getStatusColor = (status: string) => {
     switch (status) {
       case "PENDING":
         return "bg-yellow-100 text-yellow-800 border-yellow-300";
-      case "RESOLVED":
+      case "REVIEWED":
         return "bg-green-100 text-green-800 border-green-300";
-      case "REJECTED":
+      case "DISMISSED":
         return "bg-red-100 text-red-800 border-red-300";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-300";
-    }
-  };
-
-  // Get color for type badge
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case "CONTENT":
-        return "bg-blue-100 text-blue-800 border-blue-300";
-      case "ABUSE":
-        return "bg-red-100 text-red-800 border-red-300";
-      case "COPYRIGHT":
-        return "bg-purple-100 text-purple-800 border-purple-300";
-      case "OTHER":
-        return "bg-gray-100 text-gray-800 border-gray-300";
       default:
         return "bg-gray-100 text-gray-800 border-gray-300";
     }
@@ -271,16 +271,16 @@ const ReportsPage = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-        </div>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
+        </div>        <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Report Type" />
+            <SelectValue placeholder="Report Reason" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="CONTENT">Content</SelectItem>
-            <SelectItem value="ABUSE">Abuse</SelectItem>
-            <SelectItem value="COPYRIGHT">Copyright</SelectItem>
+            <SelectItem value="all">All Reasons</SelectItem>
+            <SelectItem value="INAPPROPRIATE_CONTENT">Inappropriate Content</SelectItem>
+            <SelectItem value="COPYRIGHT_INFRINGEMENT">Copyright</SelectItem>
+            <SelectItem value="SPAM">Spam</SelectItem>
+            <SelectItem value="HARASSMENT">Harassment</SelectItem>
             <SelectItem value="OTHER">Other</SelectItem>
           </SelectContent>
         </Select>
@@ -291,23 +291,21 @@ const ReportsPage = () => {
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="PENDING">Pending</SelectItem>
-            <SelectItem value="RESOLVED">Resolved</SelectItem>
-            <SelectItem value="REJECTED">Rejected</SelectItem>
+            <SelectItem value="REVIEWED">Reviewed</SelectItem>
+            <SelectItem value="DISMISSED">Dismissed</SelectItem>
           </SelectContent>
         </Select>
         <Button onClick={fetchReports}>Refresh</Button>
-      </div>
-
-      {/* Reports Table */}
+      </div>      {/* Reports Table */}
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[100px]">Type</TableHead>
+                <TableHead className="w-[100px]">Reason</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="hidden md:table-cell">Reporter</TableHead>
-                <TableHead className="hidden lg:table-cell">Target</TableHead>
+                <TableHead className="hidden lg:table-cell">Track</TableHead>
                 <TableHead className="hidden xl:table-cell">Date</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -345,33 +343,32 @@ const ReportsPage = () => {
                         <Skeleton className="h-8 w-8 rounded-full ml-auto" />
                       </TableCell>
                     </TableRow>
-                  ))
-              ) : filteredReports.length > 0 ? (
+                  ))              ) : filteredReports.length > 0 ? (
                 filteredReports.map((report) => (
                   <TableRow key={report._id}>
                     <TableCell>
                       <Badge
-                        className={`${getTypeColor(report.type)} border font-medium`}
+                        className={`${getReasonColor(report.reason)} border font-medium`}
                       >
-                        {report.type}
+                        {report.reason}
                       </Badge>
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">
                       {report.description}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {report.reporterId ? (
+                      {report.reportedBy ? (
                         <div className="flex items-center gap-2">
                           <Avatar className="h-8 w-8">
                             <AvatarImage
-                              src={report.reporterId.profilePicture}
+                              src={report.reportedBy.profilePicture}
                             />
                             <AvatarFallback>
-                              {report.reporterId.name?.charAt(0) || "U"}
+                              {report.reportedBy.name?.charAt(0) || "U"}
                             </AvatarFallback>
                           </Avatar>
                           <span className="truncate">
-                            {report.reporterId.name}
+                            {report.reportedBy.name}
                           </span>
                         </div>
                       ) : (
@@ -381,10 +378,10 @@ const ReportsPage = () => {
                     <TableCell className="hidden lg:table-cell">
                       <div className="flex flex-col">
                         <span className="text-xs text-muted-foreground">
-                          {report.targetType}
+                          TRACK
                         </span>
                         <span className="truncate">
-                          {report.targetName || "Unknown"}
+                          {report.songId?.title || "Unknown"}
                         </span>
                       </div>
                     </TableCell>
@@ -405,8 +402,7 @@ const ReportsPage = () => {
                             <span className="sr-only">Open menu</span>
                             <LuMessageSquareMore className="h-4 w-4" />
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        </DropdownMenuTrigger>                        <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem
                             onClick={() => handleViewReport(report)}
@@ -414,24 +410,10 @@ const ReportsPage = () => {
                             View Details
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          {report.targetType === "TRACK" && (
+                          {report.songId && (
                             <DropdownMenuItem asChild>
-                              <a href={`/admin/tracks/${report.targetId}`}>
+                              <a href={`/track/${report.songId._id}`}>
                                 View Track
-                              </a>
-                            </DropdownMenuItem>
-                          )}
-                          {report.targetType === "PLAYLIST" && (
-                            <DropdownMenuItem asChild>
-                              <a href={`/admin/playlists/${report.targetId}`}>
-                                View Playlist
-                              </a>
-                            </DropdownMenuItem>
-                          )}
-                          {report.targetType === "USER" && (
-                            <DropdownMenuItem asChild>
-                              <a href={`/admin/users/${report.targetId}`}>
-                                View User
                               </a>
                             </DropdownMenuItem>
                           )}
@@ -531,13 +513,12 @@ const ReportsPage = () => {
           </DialogHeader>
 
           {selectedReport && (
-            <div className="space-y-4 py-4">
-              {/* Report Type and Status */}
+            <div className="space-y-4 py-4">              {/* Report Type and Status */}
               <div className="flex flex-wrap items-center gap-2 justify-between">
                 <Badge
-                  className={`${getTypeColor(selectedReport.type)} border font-medium`}
+                  className={`${getReasonColor(selectedReport.reason)} border font-medium`}
                 >
-                  {selectedReport.type}
+                  {selectedReport.reason}
                 </Badge>
                 <Badge
                   className={`${getStatusColor(selectedReport.status)} border font-medium`}
@@ -554,47 +535,45 @@ const ReportsPage = () => {
               </div>
 
               {/* Reporter Info */}
-              {selectedReport.reporterId && (
+              {selectedReport.reportedBy && (
                 <div className="flex items-center gap-2">
                   <LuFlag className="text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
                     Reported by:
                     <span className="font-medium ml-1">
-                      {selectedReport.reporterId.name}
+                      {selectedReport.reportedBy.name}
                     </span>
                   </p>
                 </div>
               )}
 
               {/* Target Info */}
-              {selectedReport.targetType && (
+              {selectedReport.songId && (
                 <div className="bg-muted/50 p-3 rounded-md">
-                  <p className="text-sm font-medium">Reported Content:</p>
+                  <p className="text-sm font-medium">Reported Track:</p>
                   <div className="flex justify-between items-center mt-1">
                     <div>
                       <p className="text-xs text-muted-foreground">
-                        Type: {selectedReport.targetType}
+                        Type: TRACK
                       </p>
                       <p className="font-medium">
-                        {selectedReport.targetName || "Unnamed content"}
+                        {selectedReport.songId.title || "Unnamed track"}
                       </p>
                     </div>
-                    {selectedReport.targetId && (
+                    {selectedReport.songId && (
                       <Button variant="outline" size="sm" asChild>
                         <a
-                          href={`/admin/${selectedReport.targetType.toLowerCase()}s/${selectedReport.targetId}`}
+                          href={`/track/${selectedReport.songId._id}`}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          View Content
+                          View Track
                         </a>
                       </Button>
                     )}
                   </div>
                 </div>
-              )}
-
-              {/* Resolution notes field */}
+              )}              {/* Resolution notes field */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Resolution Notes:</label>
                 <Input
@@ -605,19 +584,35 @@ const ReportsPage = () => {
                 />
               </div>
 
+              {/* Flag track option */}
+              {selectedReport && selectedReport.status === "PENDING" && (
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="flagTrack"
+                    checked={flagTrack}
+                    onCheckedChange={(checked) => setFlagTrack(checked === true)}
+                  />
+                  <label
+                    htmlFor="flagTrack"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Flag this track as inappropriate/violent (will disable public access)
+                  </label>
+                </div>
+              )}
+
               {/* Dates */}
               <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                 <div>
                   <p>Reported on:</p>
                   <p>{formatDate(selectedReport.createdAt)}</p>
                 </div>
-                {selectedReport.updatedAt &&
-                  selectedReport.status !== "PENDING" && (
+                {selectedReport.updatedAt &&                  selectedReport.status !== "PENDING" && (
                     <div>
                       <p>
-                        {selectedReport.status === "RESOLVED"
-                          ? "Resolved on:"
-                          : "Rejected on:"}
+                        {selectedReport.status === "REVIEWED"
+                          ? "Reviewed on:"
+                          : "Dismissed on:"}
                       </p>
                       <p>{formatDate(selectedReport.updatedAt)}</p>
                     </div>
@@ -628,19 +623,18 @@ const ReportsPage = () => {
 
           <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
             {selectedReport && selectedReport.status === "PENDING" ? (
-              <>
-                <Button
+              <>                <Button
                   variant="outline"
                   className="w-full sm:w-auto"
-                  onClick={() => handleUpdateStatus("REJECTED")}
+                  onClick={() => handleUpdateStatus("DISMISSED")}
                 >
-                  Reject Report
+                  Dismiss Report
                 </Button>
                 <Button
                   className="w-full sm:w-auto"
-                  onClick={() => handleUpdateStatus("RESOLVED")}
+                  onClick={() => handleUpdateStatus("REVIEWED")}
                 >
-                  Mark as Resolved
+                  Mark as Reviewed
                 </Button>
               </>
             ) : (

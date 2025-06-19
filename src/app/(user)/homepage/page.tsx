@@ -34,6 +34,7 @@ interface Track {
   userId: {
     _id: string;
     username: string;
+    name?: string;
   };
   duration: number;
   uploadDate: string;
@@ -141,7 +142,7 @@ const FeaturedTrackCard = ({
         </Link>
         <Link href={`/profile/${track.userId?._id}`}>
           <p className="text-xs text-gray-500 line-clamp-1 hover:text-gray-700 transition-colors">
-            {track.userId?.username || "Unknown Artist"}
+            {track.userId?.name || track.userId?.username || "Unknown Artist"}
           </p>
         </Link>
       </div>
@@ -217,8 +218,14 @@ const HomePage = () => {
           : {},
       });
 
-      if (response.data && response.data.data) {
-        setTracks(response.data.data);
+      if (response.data) {
+        // response.data is the songs array
+        const tracksArray: Track[] = Array.isArray(response.data)
+          ? response.data
+          : response.data.data && Array.isArray(response.data.data)
+          ? response.data.data
+          : [];
+        setTracks(tracksArray);
       }
     } catch (error) {
       console.error("Error fetching tracks:", error);
@@ -372,13 +379,12 @@ const HomePage = () => {
                 <Search
                   className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
                   size={20}
-                />
-                <Input
+                />                <Input
                   type="text"
                   placeholder="Search for music, artists, or playlists..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-12 pr-28 py-4 text-lg bg-white/95 backdrop-blur-sm border-0 rounded-xl shadow-lg focus:ring-2 focus:ring-white/50"
+                  className="w-full pl-12 pr-28 py-4 text-lg bg-white/95 backdrop-blur-sm border-0 rounded-xl shadow-lg focus:ring-2 focus:ring-white/50 text-gray-900 placeholder:text-gray-500"
                 />{" "}
                 <Button
                   type="submit"

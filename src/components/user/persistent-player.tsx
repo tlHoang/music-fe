@@ -47,7 +47,9 @@ export default function PersistentPlayer() {
                 {currentTrack.title}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                {currentTrack.artist || "Unknown Artist"}
+                {(currentTrack as any).userId?.username ||
+                  currentTrack.artist ||
+                  "Unknown Artist"}
               </div>
             </div>
 

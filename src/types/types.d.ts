@@ -7,6 +7,8 @@ interface IUser {
   profilePicture?: string;
   bio?: string;
   name?: string;
+  followersCount?: number;
+  followingCount?: number;
 }
 
 interface ISong {

@@ -177,9 +177,6 @@ const TrackCard = ({
 
         <div className="flex-grow min-w-0">
           <p className="font-medium text-sm truncate">{track.title}</p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-            {track.artist || "Unknown Artist"}
-          </p>
         </div>
 
         <div

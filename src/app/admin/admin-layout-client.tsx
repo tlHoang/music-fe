@@ -3,7 +3,7 @@
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import {
   LuLayoutDashboard,
@@ -27,50 +27,42 @@ export const AdminLayoutClient = ({ children }: AdminLayoutClientProps) => {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Ensure component is mounted before showing active states
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Navigation items
-  const navItems = [
-    {
+  const navItems = [    {
       icon: LuLayoutDashboard,
       title: "Dashboard",
-      href: "/admin",
-      active: pathname === "/admin",
+      href: "/admin/dashboard",
+      active: mounted && pathname === "/admin/dashboard",
     },
     {
       icon: LuUsers,
       title: "Users",
       href: "/admin/users",
-      active: pathname === "/admin/users",
+      active: mounted && pathname === "/admin/users",
     },
     {
       icon: LuMusic,
       title: "Tracks",
       href: "/admin/tracks",
-      active: pathname === "/admin/tracks",
+      active: mounted && pathname === "/admin/tracks",
     },
     {
       icon: LuListMusic,
       title: "Playlists",
       href: "/admin/playlists",
-      active: pathname === "/admin/playlists",
-    },
-    {
-      icon: LuActivity,
-      title: "Analytics",
-      href: "/admin/analytics",
-      active: pathname === "/admin/analytics",
-    },
-    {
+      active: mounted && pathname === "/admin/playlists",
+    },    {
       icon: LuFlag,
       title: "Reports",
       href: "/admin/reports",
-      active: pathname === "/admin/reports",
-    },
-    {
-      icon: LuSettings,
-      title: "Settings",
-      href: "/admin/settings",
-      active: pathname === "/admin/settings",
+      active: mounted && pathname === "/admin/reports",
     },
   ];
 

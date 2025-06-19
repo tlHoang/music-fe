@@ -13,20 +13,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import SessionDebugger from "@/components/debug/session-debugger";
-import DatabaseCheck from "@/components/debug/database-check";
-import APIResponse from "@/components/debug/api-response";
-import PlaylistDebugger from "@/components/debug/playlist-debugger";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { toast } from "sonner";
 import {
   Library,
   Pencil,
@@ -40,7 +27,16 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import PlaylistCoverUpload from "@/components/user/playlist/playlist-cover-upload";
 
 // Interface definitions
@@ -109,24 +105,12 @@ export default function ManagePlaylistsPage() {
       return;
     }
 
-    console.log("Session user:", {
-      id: session.user._id,
-      email: session.user.email,
-      role: session.user.role,
-      tokenLength: session.user.access_token?.length,
-    });
-
     setLoading(true);
     setError(null);
 
     try {
       // This is the correct endpoint for the current user's playlists
       const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/playlists/user`;
-      console.log("Fetching playlists from:", apiUrl);
-      console.log(
-        "Using auth token:",
-        session.user.access_token?.substring(0, 10) + "..."
-      );
 
       const response = await fetch(apiUrl, {
         headers: {
@@ -135,7 +119,6 @@ export default function ManagePlaylistsPage() {
         },
       });
       if (!response.ok) {
-        console.error("Response status:", response.status, response.statusText);
         const errorText = await response.text();
         console.error("Error response body:", errorText);
 
@@ -153,18 +136,6 @@ export default function ManagePlaylistsPage() {
         return;
       }
       const responseData = await response.json();
-      console.log("Playlists response:", responseData);
-
-      // Detailed logging of the response structure
-      console.log("Response structure:", {
-        hasStatusCode: responseData.statusCode !== undefined,
-        statusCode: responseData.statusCode,
-        hasData: responseData.data !== undefined,
-        dataType: typeof responseData.data,
-        hasNestedSuccess: responseData.data?.success !== undefined,
-        hasNestedData: responseData.data?.data !== undefined,
-        nestedDataIsArray: Array.isArray(responseData.data?.data),
-      });
 
       // Extract playlists from the nested response format we're seeing
       let playlistsData = [];
@@ -175,29 +146,20 @@ export default function ManagePlaylistsPage() {
         typeof responseData.data === "object" &&
         responseData.data !== null
       ) {
-        console.log("Found expected response format with statusCode 200");
-
         // Check for the nested data.success.data structure
         if (
           responseData.data.success === true &&
           Array.isArray(responseData.data.data)
         ) {
-          console.log("Found nested data.success.data array structure");
           playlistsData = responseData.data.data;
-          console.log(
-            `Extracted ${playlistsData.length} playlists from nested structure`
-          );
         }
       }
       // Original format checks (fallbacks)
       else if (responseData.success && Array.isArray(responseData.data)) {
-        console.log("Using success.data format");
         playlistsData = responseData.data;
       } else if (Array.isArray(responseData)) {
-        console.log("Using direct array format");
         playlistsData = responseData;
       } else if (responseData.data && Array.isArray(responseData.data)) {
-        console.log("Using data format");
         playlistsData = responseData.data;
       } else {
         console.error("Unexpected response format:", responseData);
@@ -208,8 +170,6 @@ export default function ManagePlaylistsPage() {
         return;
       } // Transform the playlists data if needed to match the IPlaylist interface
       const transformedPlaylists = playlistsData.map((playlist: any) => {
-        console.log("Raw playlist data:", playlist);
-
         // Ensure songs is always an array of ISong objects
         const songs = Array.isArray(playlist.songs)
           ? playlist.songs.map((song: any) => {
@@ -245,10 +205,6 @@ export default function ManagePlaylistsPage() {
       });
       // Display playlist data for debugging
       if (transformedPlaylists.length > 0) {
-        console.log(
-          "Sample playlist:",
-          JSON.stringify(transformedPlaylists[0], null, 2)
-        );
       } else {
         console.log("No playlists found");
       }
@@ -577,8 +533,6 @@ export default function ManagePlaylistsPage() {
   if (error) {
     return (
       <div className="container mx-auto p-6 max-w-4xl">
-        <PlaylistDebugger />
-
         <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-4">
           {error}
         </div>
@@ -646,7 +600,6 @@ export default function ManagePlaylistsPage() {
   }
   return (
     <div className="container mx-auto p-6">
-      {process.env.NODE_ENV !== "production" && <PlaylistDebugger />}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Manage Your Playlists</h1>{" "}
         <div className="flex gap-3">
@@ -660,104 +613,6 @@ export default function ManagePlaylistsPage() {
               Create New Playlist
             </Button>
           </Link>
-          {/* Debug button for direct API check */}
-          {process.env.NODE_ENV !== "production" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="ml-4 bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900 dark:text-blue-200"
-              onClick={async () => {
-                if (!session?.user?.access_token) {
-                  alert("No access token found");
-                  return;
-                }
-
-                try {
-                  // First, check for any playlists in MongoDB
-                  const userId = session.user._id;
-                  console.log(
-                    "Checking MongoDB for playlists with userId:",
-                    userId
-                  );
-
-                  // Fetch again with explicit debugging
-                  fetchUserPlaylists();
-
-                  // Alert the user
-                  alert("Checking for playlists - see console for debug info");
-                } catch (error: any) {
-                  console.error("API test error:", error);
-                  alert(`Error: ${error.message}`);
-                }
-              }}
-            >
-              Debug: Check API
-            </Button>
-          )}
-          {/* Debug button for manual playlist creation */}
-          {process.env.NODE_ENV !== "production" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="ml-4 bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900 dark:text-yellow-200"
-              onClick={async () => {
-                if (!session?.user?.access_token) {
-                  alert("No access token found");
-                  return;
-                }
-
-                try {
-                  const name = prompt("Enter playlist name:");
-                  if (!name) return;
-
-                  const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/playlists`,
-                    {
-                      method: "POST",
-                      headers: {
-                        Authorization: `Bearer ${session.user.access_token}`,
-                        "Content-Type": "application/json",
-                      },
-                      body: JSON.stringify({
-                        name,
-                        visibility: "PUBLIC",
-                        userId: session.user._id,
-                      }),
-                    }
-                  );
-
-                  if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error("Create playlist error response:", errorText);
-                    alert(`Failed to create playlist: ${errorText}`);
-                    return;
-                  }
-                  const result = await response.json();
-                  console.log("Create playlist result:", result);
-
-                  // Log detailed information about the response
-                  console.log("Create playlist response details:", {
-                    hasStatusCode: result.statusCode !== undefined,
-                    statusCode: result.statusCode,
-                    hasData: result.data !== undefined,
-                    dataType: typeof result.data,
-                  });
-
-                  alert(
-                    "Playlist created successfully! Refreshing playlists..."
-                  );
-
-                  // Fetch the playlists again
-                  fetchUserPlaylists();
-                } catch (error: any) {
-                  console.error("Error creating playlist:", error);
-                  alert(`Error: ${error.message}`);
-                }
-              }}
-            >
-              Debug: Create Playlist
-            </Button>
-          )}
         </div>
       </div>
       {playlists.length === 0 ? (
@@ -922,7 +777,7 @@ export default function ManagePlaylistsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>Playlist Cover</Label>
+              {/* Playlist Cover upload without label */}
               <PlaylistCoverUpload
                 playlistId={selectedPlaylist?._id || ""}
                 currentCover={selectedPlaylist?.cover}

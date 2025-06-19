@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +16,7 @@ import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePlayer } from "@/components/app/player-context";
 import LikeButton from "@/components/user/like-button.component";
-import { Play, Pause, Edit, Upload } from "lucide-react";
+import { Play, Pause, Edit } from "lucide-react";
 import { toast } from "sonner";
 
 const UserProfilePage = () => {
@@ -33,12 +32,7 @@ const UserProfilePage = () => {
 
   // Edit mode state
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({
-    name: "",
-    bio: "",
-  });
-  const [profilePicture, setProfilePicture] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ name: "" });
 
   // Player context
   const { playTrack, currentTrack, isPlaying, togglePlayPause } = usePlayer();
@@ -53,7 +47,6 @@ const UserProfilePage = () => {
     if (userData) {
       setEditForm({
         name: userData.name || "",
-        bio: userData.bio || "",
       });
     }
   }, [userData]);
@@ -80,7 +73,9 @@ const UserProfilePage = () => {
       }
 
       const userResponse = await userRes.json();
-      setUserData(userResponse.data);
+      // Unwrap nested data if present
+      const fetchedUser = userResponse.data?.data ?? userResponse.data;
+      setUserData(fetchedUser);
 
       // Fetch user tracks
       const tracksRes = await fetch(
@@ -175,26 +170,14 @@ const UserProfilePage = () => {
   const handleProfileUpdate = async () => {
     try {
       // Prepare fetch options
-      let fetchOptions: RequestInit = {
-        method: "PUT",
+      const fetchOptions: RequestInit = {
+        method: "PATCH",
         headers: {
           Authorization: `Bearer ${session?.user?.access_token}`,
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify(editForm),
       };
-
-      // Create form data if there's a profile picture to upload
-      if (profilePicture) {
-        const formData = new FormData();
-        formData.append("profilePicture", profilePicture);
-        formData.append("name", editForm.name);
-        formData.append("bio", editForm.bio);
-        fetchOptions.body = formData;
-      } else {
-        fetchOptions.body = JSON.stringify(editForm);
-        // Add Content-Type header only when not using FormData
-        (fetchOptions.headers as Record<string, string>)["Content-Type"] =
-          "application/json";
-      }
 
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/users/${userId}`,
@@ -217,27 +200,11 @@ const UserProfilePage = () => {
           },
         });
         setIsEditing(false);
-        setPreviewUrl(null);
-        setProfilePicture(null);
         toast.success("Profile updated successfully");
       }
     } catch (error) {
       console.error("Error updating profile:", error);
       toast.error("Failed to update profile");
-    }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setProfilePicture(file);
-
-      // Create preview URL
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
@@ -309,35 +276,17 @@ const UserProfilePage = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6">
         <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
           {isEditing ? (
-            <div className="relative">
-              <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-gray-200 flex-shrink-0">
-                <Image
-                  src={
-                    previewUrl ||
-                    userData.profilePicture ||
-                    "/default-profile.jpg"
-                  }
-                  alt="User Profile"
-                  width={128}
-                  height={128}
-                  className="object-cover w-full h-full"
-                />
-              </div>
-              <div className="absolute bottom-0 right-0">
-                <label
-                  htmlFor="profile-picture"
-                  className="cursor-pointer bg-primary text-white p-2 rounded-full shadow-md hover:bg-primary/90 transition-colors"
-                >
-                  <Upload size={16} />
-                  <input
-                    id="profile-picture"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="hidden"
-                  />
-                </label>
-              </div>
+            <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-gray-200 flex-shrink-0">
+              <Image
+                src={
+                  userData.profilePicture ||
+                  "/default-profile.jpg"
+                }
+                alt="User Profile"
+                width={128}
+                height={128}
+                className="object-cover w-full h-full"
+              />
             </div>
           ) : (
             <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-gray-200 flex-shrink-0">
@@ -365,30 +314,15 @@ const UserProfilePage = () => {
                     placeholder="Your display name"
                   />
                 </div>
-                <div>
-                  <label className="text-sm font-medium mb-1 block">Bio</label>
-                  <Textarea
-                    name="bio"
-                    value={editForm.bio}
-                    onChange={handleInputChange}
-                    placeholder="Tell others about yourself"
-                    rows={3}
-                  />
-                </div>
               </div>
             ) : (
               <>
                 <h1 className="text-2xl font-bold mb-2">
                   {userData.name || userData.username || userData.email}
-                  test1
                 </h1>
-                {userData.username ? (
+                {userData.bio && (
                   <p className="text-gray-600 dark:text-gray-300 mb-4">
-                    {/* {userData.bio} */}
-                  </p>
-                ) : (
-                  <p className="text-gray-400 dark:text-gray-500 italic mb-4">
-                    {/* No bio provided */}
+                    {userData.bio}
                   </p>
                 )}
               </>
@@ -401,8 +335,7 @@ const UserProfilePage = () => {
                   className="text-sm text-gray-600 hover:underline"
                 >
                   <span className="font-semibold">
-                    {/* {userData.followersCount || 0} */}
-                    {/* temp */}1
+                    {userData.followersCount || 0}
                   </span>{" "}
                   Followers
                 </Link>
@@ -411,8 +344,7 @@ const UserProfilePage = () => {
                   className="text-sm text-gray-600 hover:underline"
                 >
                   <span className="font-semibold">
-                    {/* {userData.followingCount || 0} */}
-                    {/* temp */}1
+                    {userData.followingCount || 0}
                   </span>{" "}
                   Following
                 </Link>
@@ -430,8 +362,6 @@ const UserProfilePage = () => {
                     variant="outline"
                     onClick={() => {
                       setIsEditing(false);
-                      setPreviewUrl(null);
-                      setProfilePicture(null);
                     }}
                   >
                     Cancel
@@ -468,9 +398,6 @@ const UserProfilePage = () => {
             </TabsTrigger>
             <TabsTrigger key="playlists-tab" value="playlists">
               Playlists
-            </TabsTrigger>
-            <TabsTrigger key="about-tab" value="about">
-              About
             </TabsTrigger>
           </TabsList>
 
@@ -613,33 +540,6 @@ const UserProfilePage = () => {
                 ))}
               </div>
             )}
-          </TabsContent>
-
-          <TabsContent value="about">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">
-                About {userData.name || userData.username || userData.email}
-              </h2>
-              {userData.bio ? (
-                <p className="text-gray-700 dark:text-gray-300">
-                  {userData.bio}
-                </p>
-              ) : (
-                <p className="text-gray-500">
-                  You haven't added a bio yet. Edit your profile to add one.
-                </p>
-              )}
-
-              <div className="mt-6 text-sm text-gray-500 dark:text-gray-400">
-                <p className="mb-2">Email: {userData.email}</p>
-                <p>
-                  Account created:{" "}
-                  {/* {userData.createdAt
-                    ? formatDate(userData.createdAt)
-                    : "Unknown"} */}
-                </p>
-              </div>
-            </div>
           </TabsContent>
         </Tabs>
       )}

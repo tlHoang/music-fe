@@ -188,53 +188,54 @@ export default function FollowedPlaylistsPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {playlists.map((playlist) => (
-            <div
-              key={playlist._id}
-              className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-md transition-shadow group h-full flex flex-col"
-            >
-              <Link href={`/playlist/${playlist._id}`} className="flex-1">
-                <div className="bg-gradient-to-br from-purple-400 to-indigo-600 aspect-square rounded-md mb-3 flex items-center justify-center text-white text-4xl relative overflow-hidden">
-                  {playlist.name?.charAt(0).toUpperCase() || "P"}
-                  <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-20 transition-opacity flex items-center justify-center">
-                    <Library className="h-12 w-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+          {playlists.length !== 0 &&
+            playlists.map((playlist) => (
+              <div
+                key={playlist?._id}
+                className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow hover:shadow-md transition-shadow group h-full flex flex-col"
+              >
+                <Link href={`/playlist/${playlist?._id}`} className="flex-1">
+                  <div className="bg-gradient-to-br from-purple-400 to-indigo-600 aspect-square rounded-md mb-3 flex items-center justify-center text-white text-4xl relative overflow-hidden">
+                    {playlist?.name?.charAt(0).toUpperCase() || "P"}
+                    <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-20 transition-opacity flex items-center justify-center">
+                      <Library className="h-12 w-12 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
                   </div>
+                  <h3 className="font-semibold text-lg mb-1 line-clamp-1">
+                    {playlist?.name}
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-2 line-clamp-1">
+                    By{" "}
+                    {playlist?.userId?.name ||
+                      playlist?.userId?.username ||
+                      "Unknown"}
+                  </p>
+                  <div className="flex items-center text-sm text-gray-500 mb-3">
+                    <Music size={14} className="mr-1" />
+                    <span>{playlist?.songs?.length || 0} songs</span>
+                    {playlist?.followersCount !== undefined && (
+                      <>
+                        <span className="mx-2">•</span>
+                        <Heart size={14} className="mr-1" />
+                        <span>{playlist?.followersCount} followers</span>
+                      </>
+                    )}
+                  </div>
+                </Link>
+                <div className="mt-auto pt-2">
+                  <FollowPlaylistButton
+                    playlistId={playlist?._id}
+                    variant="button"
+                    size="sm"
+                    className="w-full"
+                    initialFollowState={true}
+                    onFollowChange={(isFollowing) =>
+                      handleUnfollow(playlist?._id, isFollowing)
+                    }
+                  />
                 </div>
-                <h3 className="font-semibold text-lg mb-1 line-clamp-1">
-                  {playlist.name}
-                </h3>
-                <p className="text-sm text-gray-500 mb-2 line-clamp-1">
-                  By{" "}
-                  {playlist.userId?.name ||
-                    playlist.userId?.username ||
-                    "Unknown"}
-                </p>
-                <div className="flex items-center text-sm text-gray-500 mb-3">
-                  <Music size={14} className="mr-1" />
-                  <span>{playlist.songs?.length || 0} songs</span>
-                  {playlist.followersCount !== undefined && (
-                    <>
-                      <span className="mx-2">•</span>
-                      <Heart size={14} className="mr-1" />
-                      <span>{playlist.followersCount} followers</span>
-                    </>
-                  )}
-                </div>
-              </Link>
-              <div className="mt-auto pt-2">
-                <FollowPlaylistButton
-                  playlistId={playlist._id}
-                  variant="button"
-                  size="sm"
-                  className="w-full"
-                  initialFollowState={true}
-                  onFollowChange={(isFollowing) =>
-                    handleUnfollow(playlist._id, isFollowing)
-                  }
-                />
               </div>
-            </div>
-          ))}
+            ))}
         </div>
       )}
     </div>

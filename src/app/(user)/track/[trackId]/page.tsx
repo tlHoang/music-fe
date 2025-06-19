@@ -49,7 +49,7 @@ interface Track {
   duration: number;
   uploadDate: string;
   playCount?: number;
-  genres?: string[];
+  genres?: Array<{ _id: string; name: string } | string>; // Support both populated and unpopulated genres
   cover?: string;
   likeCount?: number;
   commentCount?: number;
@@ -291,12 +291,11 @@ export default function TrackDetailsPage() {
   if (error || !track) {
     return (
       <div className="container mx-auto p-6">
-        <div className="max-w-2xl mx-auto text-center">
-          <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-lg">
+        <div className="max-w-2xl mx-auto text-center">          <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-lg">
             <h2 className="text-xl font-semibold mb-2">Track Not Found</h2>
             <p className="mb-4">
               {error ||
-                "The track you're looking for doesn't exist or may have been removed."}
+                "The track you're looking for doesn't exist, may have been removed, or has been disabled due to content policy violations."}
             </p>
             <Button onClick={() => router.back()} variant="outline">
               Go Back
@@ -419,18 +418,16 @@ export default function TrackDetailsPage() {
                       <Flag className="mr-2" size={20} />
                       Report
                     </Button>
-                  </div>
-
-                  {/* Genres */}
-                  {/* {track.genres && track.genres.length > 0 && (
+                  </div>                  {/* Genres */}
+                  {track.genres && track.genres.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {track.genres.map((genre, index) => (
                         <Badge key={index} variant="secondary">
-                          {genre}
+                          {typeof genre === 'string' ? genre : genre.name}
                         </Badge>
                       ))}
                     </div>
-                  )} */}
+                  )}
                 </div>
               </div>
             </CardContent>

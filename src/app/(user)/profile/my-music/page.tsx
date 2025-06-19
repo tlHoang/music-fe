@@ -315,50 +315,24 @@ const MyMusicPage = () => {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogTrigger asChild />
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Track</DialogTitle>
-            <DialogDescription>
-              Make changes to your track details below.
-            </DialogDescription>
+            <DialogDescription>Update track details</DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <label htmlFor="title" className="text-sm font-medium">
-                Title
-              </label>
+              <label className="block text-sm font-medium">Title</label>
               <Input
-                id="title"
                 value={editTitle}
                 onChange={(e) => setEditTitle(e.target.value)}
-                placeholder="Track title"
+                className="w-full"
               />
-            </div>
-            <div className="space-y-2">
-              <label htmlFor="visibility" className="text-sm font-medium">
-                Visibility
-              </label>
-              <select
-                id="visibility"
-                value={editVisibility}
-                onChange={(e) =>
-                  setEditVisibility(e.target.value as "PUBLIC" | "PRIVATE")
-                }
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
-              >
-                <option value="PUBLIC">Public</option>
-                <option value="PRIVATE">Private</option>
-              </select>
             </div>
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={saveEditedSong}>Save Changes</Button>
+            <Button onClick={saveEditedSong}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -46,7 +46,7 @@ interface Track {
   duration: number;
   uploadDate: string;
   playCount?: number;
-  genres?: string[];
+  genres?: Array<{ _id: string; name: string } | string>; // Support both populated and unpopulated genres
   cover?: string;
   likeCount?: number;
   commentCount?: number;
@@ -69,12 +69,15 @@ const TracksPage = () => {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedGenre, setSelectedGenre] = useState<string>("all");
   const [visibility, setVisibility] = useState<string>("PUBLIC");
-  const [sortBy, setSortBy] = useState<string>("uploadDate");
-  const [sortOrder, setSortOrder] = useState<string>("desc");
+  const [sortBy, setSortBy] = useState<string>("uploadDate");  const [sortOrder, setSortOrder] = useState<string>("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-
+  const [initialized, setInitialized] = useState(false);
   const { playTrack, currentTrack, isPlaying, togglePlayPause } = usePlayer();
+
+  // Debug log to see genres state
+  console.log("TracksPage - Current genres state:", genres, "length:", genres.length);
+
   // Initialize search query from URL parameters
   useEffect(() => {
     if (searchParams) {
@@ -84,6 +87,7 @@ const TracksPage = () => {
         setDebouncedSearchQuery(urlSearchQuery);
       }
     }
+    setInitialized(true);
   }, [searchParams]);
 
   // Debounce search query
@@ -93,21 +97,22 @@ const TracksPage = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery]);  useEffect(() => {
+    if (initialized) {
+      fetchGenres();
+    }
+  }, [session, initialized]);
 
   useEffect(() => {
-    fetchGenres();
-    fetchTracks();
-  }, [session]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-    fetchTracks(1);
-  }, [selectedGenre, visibility, sortBy, sortOrder, debouncedSearchQuery]);
-
+    if (session && initialized) {  // Only fetch tracks when session is available and component is initialized
+      setCurrentPage(1);
+      fetchTracks(1);
+    }
+  }, [selectedGenre, visibility, sortBy, sortOrder, debouncedSearchQuery, session, initialized]);
   const fetchGenres = async () => {
     try {
       setGenresLoading(true);
+      console.log("[fetchGenres] called");
       const response = await sendRequest<any>({
         url: `${process.env.NEXT_PUBLIC_API_URL}/genres`,
         method: "GET",
@@ -115,18 +120,20 @@ const TracksPage = () => {
           ? { Authorization: `Bearer ${session.user.access_token}` }
           : {},
       });
-
-      if (response.data && response.data.data) {
-        setGenres(response.data.data);
+      console.log("[fetchGenres] response:", response);
+      if (response.data && Array.isArray(response.data)) {
+        setGenres(response.data);
+        console.log("[fetchGenres] setGenres:", response.data);
+      } else {
+        console.log("[fetchGenres] No genres data found in response");
       }
     } catch (error) {
-      console.error("Error fetching genres:", error);
+      console.error("[fetchGenres] Error fetching genres:", error);
       toast.error("Failed to load genres");
     } finally {
       setGenresLoading(false);
     }
-  };
-  const fetchTracks = async (page: number = 1) => {
+  };const fetchTracks = async (page: number = 1) => {
     try {
       setLoading(page === 1);
 
@@ -137,13 +144,18 @@ const TracksPage = () => {
       params.append("sortOrder", sortOrder);
       params.append("page", page.toString());
       params.append("limit", "20");
-      if (debouncedSearchQuery.trim()) {
+      
+      // Only add search parameter if there's a search query
+      if (debouncedSearchQuery && debouncedSearchQuery.trim()) {
         params.append("search", debouncedSearchQuery.trim());
       }
 
       if (selectedGenre && selectedGenre !== "all") {
-        params.append("genre", selectedGenre);
+        const cleanGenre = selectedGenre.replace(/\?+$/, "");
+        console.log("Appending genre to params:", cleanGenre);
+        params.append("genre", cleanGenre);
       }
+      
       const url = `${process.env.NEXT_PUBLIC_API_URL}/songs/search?${params.toString()}`;
       console.log("Fetching tracks with URL:", url);
       console.log("Search query:", debouncedSearchQuery);
@@ -158,18 +170,27 @@ const TracksPage = () => {
           : {},
       });
 
-      console.log("API Response:", response);
-
-      if (response.data && response.data.data) {
-        console.log(`Found ${response.data.data.length} tracks`);
+      console.log("API Response:", response);      if (response.data && response.data.data) {
+        let fetchedTracks = response.data.data;
+        // Client-side filter fallback: ensure only tracks with selectedGenre
+        if (selectedGenre && selectedGenre !== 'all') {
+          fetchedTracks = (fetchedTracks as Track[]).filter((track: Track) =>
+            track.genres?.some((g: { _id?: string } | string) =>
+              typeof g === 'string'
+                ? g === selectedGenre
+                : g._id === selectedGenre
+            )
+          );
+        }
+        console.log(`Found ${fetchedTracks.length} tracks after client-side filter`);
         if (page === 1) {
-          setTracks(response.data.data);
+          setTracks(fetchedTracks);
         } else {
-          setTracks((prev) => [...prev, ...response.data.data]);
+          setTracks((prev) => [...prev, ...fetchedTracks]);
         }
 
         // Check if there are more tracks to load
-        setHasMore(response.data.data.length === 20);
+        setHasMore(fetchedTracks.length === 20);
         setCurrentPage(page);
       } else {
         console.log("No tracks found in response");
@@ -194,6 +215,7 @@ const TracksPage = () => {
     playTrack({
       ...track,
       audioUrl,
+      artist: track.userId.username,
     });
   };
 
@@ -225,6 +247,19 @@ const TracksPage = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
+  };  // Helper function to get genre name by ID or populated object
+  const getGenreName = (genre: string | { _id: string; name: string }): string => {
+    if (typeof genre === 'string') {
+      // If it's a string (ID), find the name from the genres array
+      const foundGenre = genres.find(g => g._id === genre);
+      return foundGenre ? foundGenre.name : genre; // fallback to ID if name not found
+    } else if (genre && typeof genre === 'object' && genre.name) {
+      // If it's already populated, return the name directly
+      return genre.name;
+    } else {
+      console.warn('Invalid genre data:', genre);
+      return 'Unknown Genre';
+    }
   };
 
   return (
@@ -269,19 +304,20 @@ const TracksPage = () => {
               <div className="flex items-center gap-2">
                 <Filter size={16} />
                 <span className="text-sm font-medium">Filters:</span>
-              </div>
-
-              <Select value={selectedGenre} onValueChange={setSelectedGenre}>
+              </div>              <Select value={selectedGenre} onValueChange={setSelectedGenre}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Select genre" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Genres</SelectItem>
-                  {genres.map((genre) => (
-                    <SelectItem key={genre._id} value={genre._id}>
-                      {genre.name}
-                    </SelectItem>
-                  ))}
+                  {genres.map((genre) => {
+                    console.log("Rendering genre option:", genre);
+                    return (
+                      <SelectItem key={genre._id} value={genre._id}>
+                        {genre.name}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
 
@@ -431,16 +467,14 @@ const TracksPage = () => {
                           />
                         )}
                       </div>
-                    </div>
-
-                    {track.genres && track.genres.length > 0 && (
+                    </div>                    {track.genres && track.genres.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1">
                         {track.genres.slice(0, 2).map((genre, index) => (
                           <span
                             key={index}
                             className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded-full"
                           >
-                            {genre}
+                            {getGenreName(genre)}
                           </span>
                         ))}
                         {track.genres.length > 2 && (

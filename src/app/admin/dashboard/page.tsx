@@ -419,16 +419,7 @@ const DashboardPage = () => {
               )}
             </div>
           </CardContent>
-        </Card>
-      </div>
-      <div className="flex justify-center mt-6">
-        <Link
-          href="/admin/activity"
-          className="text-sm text-primary hover:underline"
-        >
-          View all activity →
-        </Link>
-      </div>
+        </Card>      </div>
     </div>
   );
 };

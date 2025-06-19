@@ -18,11 +18,13 @@ const RegisterForm = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
+    username: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
   const [errors, setErrors] = useState<{
+    username?: string;
     email?: string;
     password?: string;
     confirmPassword?: string;
@@ -31,6 +33,15 @@ const RegisterForm = () => {
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
+
+    // Username validation
+    if (!formData.username.trim()) {
+      newErrors.username = "Username is required";
+    } else if (formData.username.length < 3) {
+      newErrors.username = "Username must be at least 3 characters";
+    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      newErrors.username = "Username can only contain letters, numbers, and underscores";
+    }
 
     // Email validation
     if (!formData.email.trim()) {
@@ -72,6 +83,7 @@ const RegisterForm = () => {
         url: `${process.env.NEXT_PUBLIC_API_URL}/auth/register`,
         method: "POST",
         body: {
+          username: formData.username.trim(),
           email: formData.email.trim(),
           password: formData.password,
         },
@@ -126,6 +138,27 @@ const RegisterForm = () => {
           {errors.general}
         </div>
       )}
+
+      {/* Username Field */}
+      <div className="space-y-2">
+        <Label htmlFor="username" className="text-sm font-medium">
+          Username
+        </Label>
+        <div className="relative">
+          <Input
+            id="username"
+            name="username"
+            type="text"
+            placeholder="Choose a username"
+            value={formData.username}
+            onChange={handleInputChange}
+            className={`${errors.username ? "border-red-500 focus:ring-red-500" : ""}`}
+            required
+            disabled={isLoading}
+          />
+        </div>
+        {errors.username && <p className="text-sm text-red-600">{errors.username}</p>}
+      </div>
 
       {/* Email Field */}
       <div className="space-y-2">
@@ -215,6 +248,7 @@ const RegisterForm = () => {
         className="w-full"
         disabled={
           isLoading ||
+          !formData.username ||
           !formData.email ||
           !formData.password ||
           !formData.confirmPassword

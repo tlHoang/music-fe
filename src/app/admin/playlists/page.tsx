@@ -86,17 +86,13 @@ const formatDate = (dateString?: string) => {
 const PlaylistRow = ({
   playlist,
   onViewDetails,
-  onEditPlaylist,
   onDeletePlaylist,
   onToggleVisibility,
-  onToggleFeatured,
 }: {
   playlist: Playlist;
   onViewDetails: (playlistId: string) => void;
-  onEditPlaylist: (playlist: Playlist) => void;
   onDeletePlaylist: (playlistId: string) => void;
   onToggleVisibility: (playlistId: string, isPublic: boolean) => void;
-  onToggleFeatured: (playlistId: string, isFeatured: boolean) => void;
 }) => (
   <TableRow key={playlist._id}>
     <TableCell className="w-[60px]">
@@ -141,25 +137,16 @@ const PlaylistRow = ({
             <span className="sr-only">Open menu</span>
             <LuMessageSquareMore className="h-4 w-4" />
           </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
+        </DropdownMenuTrigger>        <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           <DropdownMenuItem onClick={() => onViewDetails(playlist._id)}>
             View Details
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onEditPlaylist(playlist)}>
-            Edit Playlist
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={() => onToggleVisibility(playlist._id, !playlist.isPublic)}
           >
             {playlist.isPublic ? "Make Private" : "Make Public"}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => onToggleFeatured(playlist._id, !playlist.isFeatured)}
-          >
-            {playlist.isFeatured ? "Unfeature Playlist" : "Feature Playlist"}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -179,11 +166,8 @@ const PlaylistsPage = () => {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentPlaylistId, setCurrentPlaylistId] = useState("");
-  const [currentPlaylist, setCurrentPlaylist] = useState<Playlist | null>(null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -276,57 +260,11 @@ const PlaylistsPage = () => {
       return matchesSearch && matchesStatus;
     });
   }, [playlists, searchQuery, statusFilter]);
-
   // Handle viewing playlist details
   const handleViewDetails = (playlistId: string) => {
-    const playlist = playlists.find((p) => p._id === playlistId);
-    if (playlist) {
-      setCurrentPlaylist(playlist);
-      // In production, you would navigate to playlist detail page
-      console.log("View playlist details:", playlist);
-      toast.info(`Viewing details for playlist: ${playlist.title}`);
-    }
+    // Redirect to the user playlist view page
+    window.location.href = `/playlist/${playlistId}`;
   };
-
-  // Handle editing a playlist
-  const handleEditPlaylist = (playlist: Playlist) => {
-    setCurrentPlaylist(playlist);
-    setIsEditDialogOpen(true);
-  };
-
-  // Handle submitting edited playlist
-  const handleSubmitEdit = async () => {
-    if (!currentPlaylist || !session?.user?.access_token) return;
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/playlists/${currentPlaylist._id}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.user.access_token}`,
-          },
-          body: JSON.stringify({
-            name: currentPlaylist.title,
-            description: currentPlaylist.description,
-            visibility: currentPlaylist.isPublic ? "PUBLIC" : "PRIVATE",
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      toast.success("Playlist updated successfully");
-      setIsEditDialogOpen(false);
-      fetchPlaylists(); // Refresh the playlists list
-    } catch (error) {
-      console.error("Error updating playlist:", error);
-      toast.error("Failed to update playlist");
-    }
-  };
-
   // Handle toggling playlist visibility
   const handleToggleVisibility = async (
     playlistId: string,
@@ -357,42 +295,6 @@ const PlaylistsPage = () => {
       toast.error("Failed to update playlist visibility");
     }
   };
-
-  // Handle featuring/unfeaturing a playlist
-  const handleToggleFeatured = async (
-    playlistId: string,
-    isFeatured: boolean
-  ) => {
-    if (!session?.user?.access_token) return;
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/playlists/${playlistId}/featured`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.user.access_token}`,
-          },
-          body: JSON.stringify({ isFeatured }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      toast.success(
-        isFeatured
-          ? "Playlist is now featured"
-          : "Playlist is no longer featured"
-      );
-      fetchPlaylists(); // Refresh the playlists list
-    } catch (error) {
-      console.error("Error updating playlist featured status:", error);
-      toast.error("Failed to update featured status");
-    }
-  };
-
   // Handle deleting a playlist
   const handleDeletePlaylist = (playlistId: string) => {
     setCurrentPlaylistId(playlistId);
@@ -519,15 +421,12 @@ const PlaylistsPage = () => {
                     </TableRow>
                   ))
               ) : filteredPlaylists.length > 0 ? (
-                filteredPlaylists.map((playlist) => (
-                  <PlaylistRow
+                filteredPlaylists.map((playlist) => (                  <PlaylistRow
                     key={playlist._id}
                     playlist={playlist}
                     onViewDetails={handleViewDetails}
-                    onEditPlaylist={handleEditPlaylist}
                     onDeletePlaylist={handleDeletePlaylist}
                     onToggleVisibility={handleToggleVisibility}
-                    onToggleFeatured={handleToggleFeatured}
                   />
                 ))
               ) : (
@@ -631,100 +530,8 @@ const PlaylistsPage = () => {
             >
               Delete
             </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
+          </AlertDialogFooter>        </AlertDialogContent>
       </AlertDialog>
-
-      {/* Edit Playlist Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Playlist</DialogTitle>
-            <DialogDescription>
-              Update playlist information and settings.
-            </DialogDescription>
-          </DialogHeader>
-          {currentPlaylist && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm">Title</label>
-                <Input
-                  className="col-span-3"
-                  value={currentPlaylist.title || ""}
-                  onChange={(e) =>
-                    setCurrentPlaylist({
-                      ...currentPlaylist,
-                      title: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm">Description</label>
-                <Textarea
-                  className="col-span-3"
-                  value={currentPlaylist.description || ""}
-                  onChange={(e) =>
-                    setCurrentPlaylist({
-                      ...currentPlaylist,
-                      description: e.target.value,
-                    })
-                  }
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm">Visibility</label>
-                <Select
-                  value={currentPlaylist.isPublic ? "public" : "private"}
-                  onValueChange={(value) =>
-                    setCurrentPlaylist({
-                      ...currentPlaylist,
-                      isPublic: value === "public",
-                    })
-                  }
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select visibility" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="public">Public</SelectItem>
-                    <SelectItem value="private">Private</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <label className="text-right text-sm">Featured</label>
-                <Select
-                  value={currentPlaylist.isFeatured ? "featured" : "regular"}
-                  onValueChange={(value) =>
-                    setCurrentPlaylist({
-                      ...currentPlaylist,
-                      isFeatured: value === "featured",
-                    })
-                  }
-                >
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue placeholder="Select featured status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="featured">Featured</SelectItem>
-                    <SelectItem value="regular">Regular</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsEditDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleSubmitEdit}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
