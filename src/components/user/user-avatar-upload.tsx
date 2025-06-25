@@ -54,7 +54,6 @@ export default function UserAvatarUpload({
     try {
       const formData = new FormData();
       formData.append("avatar", selectedFile);
-
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/users/${userId}/avatar`,
         {
@@ -66,11 +65,13 @@ export default function UserAvatarUpload({
         }
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to upload avatar");
-      }
-
       const result = await response.json();
+
+      // Check for structured error response
+      if (result.success === false) {
+        toast.error(result.message || "Failed to upload avatar");
+        return;
+      }
 
       if (result.statusCode === 200 && result.data) {
         toast.success("Avatar uploaded successfully!");

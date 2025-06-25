@@ -4,6 +4,9 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/app/theme-provinder";
 // import { auth } from "@/auth";
 import { Toaster } from "@/components/ui/sonner";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import SessionProviderWrapper from "./SessionProviderWrapper";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,27 +33,17 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gradient-to-b from-[#f8fafc] to-[#e2e8f0] dark:from-[#18181b] dark:to-[#27272a] min-h-screen`}
       >
-        {/* <ToastContainer
-          position="bottom-right"
-          autoClose={3000}
-          hideProgressBar
-          newestOnTop={false}
-          closeOnClick={false}
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="light"
-          transition={Bounce}
-        /> */}
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
+        <SessionProviderWrapper>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            {/* <UserHeader /> Removed from root layout to prevent header on login/public pages */}
+            {children}
+          </ThemeProvider>
+        </SessionProviderWrapper>
         <Toaster position="bottom-right" expand={true} richColors closeButton />
       </body>
     </html>

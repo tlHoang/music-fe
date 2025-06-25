@@ -112,11 +112,21 @@ export default function CreatePlaylistPage() {
           }),
         }
       );
-
       const data = await response.json();
       console.log("Create playlist response:", data); // For debugging
 
-      // Check for different response formats
+      // Check for the new structured error format first
+      if (
+        data.success === false ||
+        (data.data && data.data.success === false)
+      ) {
+        // Extract the error message from the nested structure
+        const errorMessage = data.data ? data.data.message : data.message;
+        toast.error(errorMessage || "Failed to create playlist");
+        return;
+      }
+
+      // Check for different success response formats
       if (response.ok) {
         let playlistId;
 

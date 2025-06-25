@@ -173,15 +173,28 @@ const UploadPage = () => {
           body: formData,
         }
       );
-
       clearInterval(progressInterval);
       setProgress(100);
+
+      const data = await response.json();
+
+      // Check for the new structured error format first
+      if (
+        data.success === false ||
+        (data.data && data.data.success === false)
+      ) {
+        // Extract the error message from the nested structure
+        const errorMessage = data.data ? data.data.message : data.message;
+        setMessage(errorMessage || "Upload failed. Please try again.");
+        setLoading(false);
+        setTimeout(() => setProgress(0), 1000);
+        return;
+      }
 
       if (!response.ok) {
         throw new Error("Failed to upload music");
       }
 
-      const data: UploadMusicResponse = await response.json();
       setMessage("Upload successful!");
       setTitle("");
       setVisibility("PUBLIC");

@@ -16,6 +16,7 @@ import Image from "next/image";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePlayer } from "@/components/app/player-context";
 import LikeButton from "@/components/user/like-button.component";
+import SubscriptionStatsComponent from "@/components/user/profile/subscription-stats.component";
 import { Play, Pause, Edit } from "lucide-react";
 import { toast } from "sonner";
 
@@ -389,15 +390,18 @@ const UserProfilePage = () => {
       {/* Tabs for tracks and other content */}
       {!isEditing && (
         <Tabs defaultValue="tracks" className="w-full">
+          {" "}
           <TabsList className="mb-6">
             <TabsTrigger key="tracks-tab" value="tracks">
               Tracks
             </TabsTrigger>
             <TabsTrigger key="playlists-tab" value="playlists">
               Playlists
+            </TabsTrigger>{" "}
+            <TabsTrigger key="stats-tab" value="stats">
+              Statistics
             </TabsTrigger>
           </TabsList>
-
           <TabsContent value="tracks">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Your Tracks</h2>
@@ -496,7 +500,6 @@ const UserProfilePage = () => {
               </div>
             )}
           </TabsContent>
-
           <TabsContent value="playlists">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Your Playlists</h2>
@@ -537,6 +540,9 @@ const UserProfilePage = () => {
                 ))}
               </div>
             )}
+          </TabsContent>{" "}
+          <TabsContent value="stats">
+            <SubscriptionStatsComponent />
           </TabsContent>
         </Tabs>
       )}

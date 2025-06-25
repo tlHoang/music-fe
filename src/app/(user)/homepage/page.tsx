@@ -188,6 +188,7 @@ const FeaturedArtistCard = ({ user }: { user: User }) => {
 
 const HomePage = () => {
   const { data: session } = useSession();
+  const { playTrack, currentTrack, isPlaying, togglePlayPause } = usePlayer();
   const [tracks, setTracks] = useState<Track[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -197,8 +198,6 @@ const HomePage = () => {
     playlists: true,
   });
   const [searchQuery, setSearchQuery] = useState("");
-
-  const { playTrack, currentTrack, isPlaying, togglePlayPause } = usePlayer();
 
   useEffect(() => {
     fetchTracks();
@@ -342,6 +341,8 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50/50 via-white to-purple-50/50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      {/* Removed subscription status and manage button section */}
+
       {/* Hero Section */}
       <div className="relative overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-purple-600/90"></div>
@@ -696,6 +697,16 @@ const HomePage = () => {
                 <Button variant="outline" size="lg">
                   <Library className="mr-2" size={20} />
                   Create Playlist
+                </Button>
+              </Link>
+              <Link href="/pricing">
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white hover:from-yellow-500 hover:to-orange-600 font-semibold shadow-md border-0"
+                >
+                  <Sparkles className="mr-2" size={20} />
+                  Go Premium
                 </Button>
               </Link>
             </div>
