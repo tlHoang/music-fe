@@ -223,8 +223,8 @@ const HomePage = () => {
         const tracksArray: Track[] = Array.isArray(response.data)
           ? response.data
           : response.data.data && Array.isArray(response.data.data)
-          ? response.data.data
-          : [];
+            ? response.data.data
+            : [];
         setTracks(tracksArray);
       }
     } catch (error) {
@@ -379,7 +379,8 @@ const HomePage = () => {
                 <Search
                   className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
                   size={20}
-                />                <Input
+                />{" "}
+                <Input
                   type="text"
                   placeholder="Search for music, artists, or playlists..."
                   value={searchQuery}

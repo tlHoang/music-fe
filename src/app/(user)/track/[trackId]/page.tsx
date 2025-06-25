@@ -291,7 +291,9 @@ export default function TrackDetailsPage() {
   if (error || !track) {
     return (
       <div className="container mx-auto p-6">
-        <div className="max-w-2xl mx-auto text-center">          <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-lg">
+        <div className="max-w-2xl mx-auto text-center">
+          {" "}
+          <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-lg">
             <h2 className="text-xl font-semibold mb-2">Track Not Found</h2>
             <p className="mb-4">
               {error ||
@@ -357,7 +359,6 @@ export default function TrackDetailsPage() {
                       {track.userId.name || track.userId.username}
                     </Link>
                   </div>
-
                   {/* Track Metadata */}
                   <div className="flex flex-wrap gap-4 text-sm text-gray-500">
                     <div className="flex items-center gap-1">
@@ -381,7 +382,6 @@ export default function TrackDetailsPage() {
                       </div>
                     )}
                   </div>
-
                   {/* Action Buttons */}
                   <div className="flex flex-wrap gap-3">
                     <Button
@@ -418,12 +418,13 @@ export default function TrackDetailsPage() {
                       <Flag className="mr-2" size={20} />
                       Report
                     </Button>
-                  </div>                  {/* Genres */}
+                  </div>{" "}
+                  {/* Genres */}
                   {track.genres && track.genres.length > 0 && (
                     <div className="flex flex-wrap gap-2">
                       {track.genres.map((genre, index) => (
                         <Badge key={index} variant="secondary">
-                          {typeof genre === 'string' ? genre : genre.name}
+                          {typeof genre === "string" ? genre : genre.name}
                         </Badge>
                       ))}
                     </div>

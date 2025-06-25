@@ -137,7 +137,8 @@ const PlaylistRow = ({
             <span className="sr-only">Open menu</span>
             <LuMessageSquareMore className="h-4 w-4" />
           </Button>
-        </DropdownMenuTrigger>        <DropdownMenuContent align="end">
+        </DropdownMenuTrigger>{" "}
+        <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
           <DropdownMenuItem onClick={() => onViewDetails(playlist._id)}>
             View Details
@@ -166,7 +167,8 @@ const PlaylistsPage = () => {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [currentPlaylistId, setCurrentPlaylistId] = useState("");
 
   // Pagination
@@ -421,7 +423,8 @@ const PlaylistsPage = () => {
                     </TableRow>
                   ))
               ) : filteredPlaylists.length > 0 ? (
-                filteredPlaylists.map((playlist) => (                  <PlaylistRow
+                filteredPlaylists.map((playlist) => (
+                  <PlaylistRow
                     key={playlist._id}
                     playlist={playlist}
                     onViewDetails={handleViewDetails}
@@ -530,7 +533,8 @@ const PlaylistsPage = () => {
             >
               Delete
             </AlertDialogAction>
-          </AlertDialogFooter>        </AlertDialogContent>
+          </AlertDialogFooter>{" "}
+        </AlertDialogContent>
       </AlertDialog>
     </div>
   );

@@ -80,7 +80,8 @@ const ReportsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [resolutionNote, setResolutionNote] = useState("");
   const [flagTrack, setFlagTrack] = useState(false);
@@ -110,7 +111,8 @@ const ReportsPage = () => {
 
       if (statusFilter !== "all") {
         queryParams.append("status", statusFilter);
-      }      const response = await fetch(
+      }
+      const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/songs/admin/flag-reports?${queryParams.toString()}`,
         {
           headers: {
@@ -121,17 +123,22 @@ const ReportsPage = () => {
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
-      }      const data = await response.json();
+      }
+      const data = await response.json();
 
       // Handle different API response structures
       if (data && data.data && data.data.data && data.data.data.reports) {
         // Backend returns: { statusCode, message, data: { success, data: { reports, pagination } } }
         setReports(data.data.data.reports);
-        setTotalReports(data.data.data.pagination?.total || data.data.data.reports.length);
+        setTotalReports(
+          data.data.data.pagination?.total || data.data.data.reports.length
+        );
       } else if (data && data.data && data.data.reports) {
         // Fallback: { data: { reports, pagination } }
         setReports(data.data.reports);
-        setTotalReports(data.data.pagination?.total || data.data.reports.length);
+        setTotalReports(
+          data.data.pagination?.total || data.data.reports.length
+        );
       } else if (data && Array.isArray(data.data)) {
         setReports(data.data);
         setTotalReports(data.totalCount || data.data.length);
@@ -171,7 +178,7 @@ const ReportsPage = () => {
   // Format date
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
-  };  // View report details
+  }; // View report details
   const handleViewReport = (report: Report) => {
     setSelectedReport(report);
     setResolutionNote(report.reviewNotes || "");
@@ -183,14 +190,16 @@ const ReportsPage = () => {
   const handleUpdateStatus = async (status: string) => {
     if (!selectedReport || !session?.user?.access_token) return;
 
-    try {      const response = await fetch(
+    try {
+      const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/songs/admin/flag-reports/${selectedReport._id}/review`,
         {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.user.access_token}`,
-          },          body: JSON.stringify({
+          },
+          body: JSON.stringify({
             status,
             reviewNotes: resolutionNote,
             flagSong: flagTrack, // Include the flag track option
@@ -202,7 +211,7 @@ const ReportsPage = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      toast.success(`Report marked as ${status.toLowerCase()}`);      // Update local state
+      toast.success(`Report marked as ${status.toLowerCase()}`); // Update local state
       setReports(
         reports.map((report) =>
           report._id === selectedReport._id
@@ -259,7 +268,6 @@ const ReportsPage = () => {
           </p>
         </div>
       </div>
-
       {/* Search and Filter UI */}
       <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
         <div className="relative flex-1">
@@ -271,13 +279,16 @@ const ReportsPage = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-        </div>        <Select value={typeFilter} onValueChange={setTypeFilter}>
+        </div>{" "}
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Report Reason" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Reasons</SelectItem>
-            <SelectItem value="INAPPROPRIATE_CONTENT">Inappropriate Content</SelectItem>
+            <SelectItem value="INAPPROPRIATE_CONTENT">
+              Inappropriate Content
+            </SelectItem>
             <SelectItem value="COPYRIGHT_INFRINGEMENT">Copyright</SelectItem>
             <SelectItem value="SPAM">Spam</SelectItem>
             <SelectItem value="HARASSMENT">Harassment</SelectItem>
@@ -296,7 +307,8 @@ const ReportsPage = () => {
           </SelectContent>
         </Select>
         <Button onClick={fetchReports}>Refresh</Button>
-      </div>      {/* Reports Table */}
+      </div>{" "}
+      {/* Reports Table */}
       <Card>
         <CardContent className="p-0">
           <Table>
@@ -343,7 +355,8 @@ const ReportsPage = () => {
                         <Skeleton className="h-8 w-8 rounded-full ml-auto" />
                       </TableCell>
                     </TableRow>
-                  ))              ) : filteredReports.length > 0 ? (
+                  ))
+              ) : filteredReports.length > 0 ? (
                 filteredReports.map((report) => (
                   <TableRow key={report._id}>
                     <TableCell>
@@ -402,7 +415,8 @@ const ReportsPage = () => {
                             <span className="sr-only">Open menu</span>
                             <LuMessageSquareMore className="h-4 w-4" />
                           </Button>
-                        </DropdownMenuTrigger>                        <DropdownMenuContent align="end">
+                        </DropdownMenuTrigger>{" "}
+                        <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem
                             onClick={() => handleViewReport(report)}
@@ -433,7 +447,6 @@ const ReportsPage = () => {
           </Table>
         </CardContent>
       </Card>
-
       {/* Pagination controls */}
       {totalPages > 1 && (
         <div className="flex justify-center space-x-1">
@@ -501,7 +514,6 @@ const ReportsPage = () => {
           </Button>
         </div>
       )}
-
       {/* Report Details Dialog */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="sm:max-w-[550px]">
@@ -513,7 +525,9 @@ const ReportsPage = () => {
           </DialogHeader>
 
           {selectedReport && (
-            <div className="space-y-4 py-4">              {/* Report Type and Status */}
+            <div className="space-y-4 py-4">
+              {" "}
+              {/* Report Type and Status */}
               <div className="flex flex-wrap items-center gap-2 justify-between">
                 <Badge
                   className={`${getReasonColor(selectedReport.reason)} border font-medium`}
@@ -526,14 +540,12 @@ const ReportsPage = () => {
                   {selectedReport.status}
                 </Badge>
               </div>
-
               {/* Description */}
               <div className="bg-muted p-3 rounded-md text-sm">
                 <p className="whitespace-pre-wrap">
                   {selectedReport.description}
                 </p>
               </div>
-
               {/* Reporter Info */}
               {selectedReport.reportedBy && (
                 <div className="flex items-center gap-2">
@@ -546,7 +558,6 @@ const ReportsPage = () => {
                   </p>
                 </div>
               )}
-
               {/* Target Info */}
               {selectedReport.songId && (
                 <div className="bg-muted/50 p-3 rounded-md">
@@ -573,7 +584,8 @@ const ReportsPage = () => {
                     )}
                   </div>
                 </div>
-              )}              {/* Resolution notes field */}
+              )}{" "}
+              {/* Resolution notes field */}
               <div className="space-y-2">
                 <label className="text-sm font-medium">Resolution Notes:</label>
                 <Input
@@ -583,31 +595,33 @@ const ReportsPage = () => {
                   onChange={(e) => setResolutionNote(e.target.value)}
                 />
               </div>
-
               {/* Flag track option */}
               {selectedReport && selectedReport.status === "PENDING" && (
                 <div className="flex items-center space-x-2">
                   <Checkbox
                     id="flagTrack"
                     checked={flagTrack}
-                    onCheckedChange={(checked) => setFlagTrack(checked === true)}
+                    onCheckedChange={(checked) =>
+                      setFlagTrack(checked === true)
+                    }
                   />
                   <label
                     htmlFor="flagTrack"
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
-                    Flag this track as inappropriate/violent (will disable public access)
+                    Flag this track as inappropriate/violent (will disable
+                    public access)
                   </label>
                 </div>
               )}
-
               {/* Dates */}
               <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
                 <div>
                   <p>Reported on:</p>
                   <p>{formatDate(selectedReport.createdAt)}</p>
                 </div>
-                {selectedReport.updatedAt &&                  selectedReport.status !== "PENDING" && (
+                {selectedReport.updatedAt &&
+                  selectedReport.status !== "PENDING" && (
                     <div>
                       <p>
                         {selectedReport.status === "REVIEWED"
@@ -623,7 +637,9 @@ const ReportsPage = () => {
 
           <DialogFooter className="flex flex-col sm:flex-row gap-2 sm:justify-between">
             {selectedReport && selectedReport.status === "PENDING" ? (
-              <>                <Button
+              <>
+                {" "}
+                <Button
                   variant="outline"
                   className="w-full sm:w-auto"
                   onClick={() => handleUpdateStatus("DISMISSED")}

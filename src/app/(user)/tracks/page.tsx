@@ -69,14 +69,20 @@ const TracksPage = () => {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [selectedGenre, setSelectedGenre] = useState<string>("all");
   const [visibility, setVisibility] = useState<string>("PUBLIC");
-  const [sortBy, setSortBy] = useState<string>("uploadDate");  const [sortOrder, setSortOrder] = useState<string>("desc");
+  const [sortBy, setSortBy] = useState<string>("uploadDate");
+  const [sortOrder, setSortOrder] = useState<string>("desc");
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [initialized, setInitialized] = useState(false);
   const { playTrack, currentTrack, isPlaying, togglePlayPause } = usePlayer();
 
   // Debug log to see genres state
-  console.log("TracksPage - Current genres state:", genres, "length:", genres.length);
+  console.log(
+    "TracksPage - Current genres state:",
+    genres,
+    "length:",
+    genres.length
+  );
 
   // Initialize search query from URL parameters
   useEffect(() => {
@@ -97,18 +103,28 @@ const TracksPage = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);  useEffect(() => {
+  }, [searchQuery]);
+  useEffect(() => {
     if (initialized) {
       fetchGenres();
     }
   }, [session, initialized]);
 
   useEffect(() => {
-    if (session && initialized) {  // Only fetch tracks when session is available and component is initialized
+    if (session && initialized) {
+      // Only fetch tracks when session is available and component is initialized
       setCurrentPage(1);
       fetchTracks(1);
     }
-  }, [selectedGenre, visibility, sortBy, sortOrder, debouncedSearchQuery, session, initialized]);
+  }, [
+    selectedGenre,
+    visibility,
+    sortBy,
+    sortOrder,
+    debouncedSearchQuery,
+    session,
+    initialized,
+  ]);
   const fetchGenres = async () => {
     try {
       setGenresLoading(true);
@@ -133,7 +149,8 @@ const TracksPage = () => {
     } finally {
       setGenresLoading(false);
     }
-  };const fetchTracks = async (page: number = 1) => {
+  };
+  const fetchTracks = async (page: number = 1) => {
     try {
       setLoading(page === 1);
 
@@ -144,7 +161,7 @@ const TracksPage = () => {
       params.append("sortOrder", sortOrder);
       params.append("page", page.toString());
       params.append("limit", "20");
-      
+
       // Only add search parameter if there's a search query
       if (debouncedSearchQuery && debouncedSearchQuery.trim()) {
         params.append("search", debouncedSearchQuery.trim());
@@ -155,7 +172,7 @@ const TracksPage = () => {
         console.log("Appending genre to params:", cleanGenre);
         params.append("genre", cleanGenre);
       }
-      
+
       const url = `${process.env.NEXT_PUBLIC_API_URL}/songs/search?${params.toString()}`;
       console.log("Fetching tracks with URL:", url);
       console.log("Search query:", debouncedSearchQuery);
@@ -170,19 +187,22 @@ const TracksPage = () => {
           : {},
       });
 
-      console.log("API Response:", response);      if (response.data && response.data.data) {
+      console.log("API Response:", response);
+      if (response.data && response.data.data) {
         let fetchedTracks = response.data.data;
         // Client-side filter fallback: ensure only tracks with selectedGenre
-        if (selectedGenre && selectedGenre !== 'all') {
+        if (selectedGenre && selectedGenre !== "all") {
           fetchedTracks = (fetchedTracks as Track[]).filter((track: Track) =>
             track.genres?.some((g: { _id?: string } | string) =>
-              typeof g === 'string'
+              typeof g === "string"
                 ? g === selectedGenre
                 : g._id === selectedGenre
             )
           );
         }
-        console.log(`Found ${fetchedTracks.length} tracks after client-side filter`);
+        console.log(
+          `Found ${fetchedTracks.length} tracks after client-side filter`
+        );
         if (page === 1) {
           setTracks(fetchedTracks);
         } else {
@@ -247,18 +267,20 @@ const TracksPage = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString();
-  };  // Helper function to get genre name by ID or populated object
-  const getGenreName = (genre: string | { _id: string; name: string }): string => {
-    if (typeof genre === 'string') {
+  }; // Helper function to get genre name by ID or populated object
+  const getGenreName = (
+    genre: string | { _id: string; name: string }
+  ): string => {
+    if (typeof genre === "string") {
       // If it's a string (ID), find the name from the genres array
-      const foundGenre = genres.find(g => g._id === genre);
+      const foundGenre = genres.find((g) => g._id === genre);
       return foundGenre ? foundGenre.name : genre; // fallback to ID if name not found
-    } else if (genre && typeof genre === 'object' && genre.name) {
+    } else if (genre && typeof genre === "object" && genre.name) {
       // If it's already populated, return the name directly
       return genre.name;
     } else {
-      console.warn('Invalid genre data:', genre);
-      return 'Unknown Genre';
+      console.warn("Invalid genre data:", genre);
+      return "Unknown Genre";
     }
   };
 
@@ -304,7 +326,8 @@ const TracksPage = () => {
               <div className="flex items-center gap-2">
                 <Filter size={16} />
                 <span className="text-sm font-medium">Filters:</span>
-              </div>              <Select value={selectedGenre} onValueChange={setSelectedGenre}>
+              </div>{" "}
+              <Select value={selectedGenre} onValueChange={setSelectedGenre}>
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Select genre" />
                 </SelectTrigger>
@@ -320,7 +343,6 @@ const TracksPage = () => {
                   })}
                 </SelectContent>
               </Select>
-
               <Select value={sortBy} onValueChange={setSortBy}>
                 <SelectTrigger className="w-[160px]">
                   <SelectValue placeholder="Sort by" />
@@ -332,7 +354,6 @@ const TracksPage = () => {
                   <SelectItem value="likeCount">Likes</SelectItem>
                 </SelectContent>
               </Select>
-
               <Button
                 variant="outline"
                 size="sm"
@@ -438,14 +459,12 @@ const TracksPage = () => {
                         {track.title}
                       </h3>
                     </Link>
-
                     <Link href={`/profile/${track.userId._id}`}>
                       <p className="text-sm text-gray-600 mb-3 hover:text-gray-800 transition-colors flex items-center">
                         <User size={14} className="mr-1" />
                         {track.userId.name || track.userId.username}
                       </p>
                     </Link>
-
                     <div className="flex items-center justify-between text-sm text-gray-500">
                       <span className="flex items-center">
                         <Clock size={14} className="mr-1" />
@@ -467,7 +486,8 @@ const TracksPage = () => {
                           />
                         )}
                       </div>
-                    </div>                    {track.genres && track.genres.length > 0 && (
+                    </div>{" "}
+                    {track.genres && track.genres.length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-1">
                         {track.genres.slice(0, 2).map((genre, index) => (
                           <span

@@ -18,7 +18,14 @@
 import { auth } from "@/auth";
 
 export default auth((req) => {
-  const publicRoutes = ["/login", "/register", "/verify", "/track/"];
+  const publicRoutes = [
+    "/login",
+    "/register",
+    "/verify",
+    "/track/",
+    "/forgot-password",
+    "/reset-password",
+  ];
   const isPublicRoute = publicRoutes.some((route) =>
     req.nextUrl.pathname.startsWith(route)
   );

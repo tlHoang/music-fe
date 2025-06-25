@@ -278,10 +278,7 @@ const UserProfilePage = () => {
           {isEditing ? (
             <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-gray-200 flex-shrink-0">
               <Image
-                src={
-                  userData.profilePicture ||
-                  "/default-profile.jpg"
-                }
+                src={userData.profilePicture || "/default-profile.jpg"}
                 alt="User Profile"
                 width={128}
                 height={128}

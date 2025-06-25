@@ -62,7 +62,7 @@ const VerifyPage = () => {
       });
       if (res.statusCode === 200) {
         toast.success("New verification code sent to your email!");
-        setCode(""); // Clear the current code
+        setCode("");
       } else {
         toast.error(res.message || "Failed to resend code. Please try again.");
       }
@@ -83,13 +83,14 @@ const VerifyPage = () => {
               <CheckCircle className="w-8 h-8 text-primary-foreground" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Verify Your Email</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Verify Your Email
+          </h1>
           <p className="text-muted-foreground">
             We sent a verification code to your email address
           </p>
         </div>
 
-        {/* Verification Card */}
         <Card className="shadow-lg border-0 bg-card/50 backdrop-blur-sm">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-2xl text-center flex items-center justify-center gap-2">
@@ -121,7 +122,6 @@ const VerifyPage = () => {
                 />
               </div>
 
-              {/* Submit Button */}
               <Button
                 type="submit"
                 className="w-full"
@@ -142,7 +142,6 @@ const VerifyPage = () => {
               </Button>
             </form>
 
-            {/* Resend Section */}
             <div className="space-y-4">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -191,7 +190,6 @@ const VerifyPage = () => {
           </CardContent>
         </Card>
 
-        {/* Footer */}
         <div className="text-center text-xs text-muted-foreground space-y-2">
           <p>© 2025 Music Streaming Platform. All rights reserved.</p>
           <div className="flex justify-center space-x-4">

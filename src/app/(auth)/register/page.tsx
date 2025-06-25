@@ -13,7 +13,6 @@ const RegisterPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
       <div className="w-full max-w-md space-y-6">
-        {/* Logo/Brand Section */}
         <div className="text-center space-y-2">
           <div className="flex justify-center">
             <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
@@ -32,7 +31,6 @@ const RegisterPage = () => {
           </p>
         </div>
 
-        {/* Register Card */}
         <Card className="shadow-lg border-0 bg-card/50 backdrop-blur-sm">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-2xl text-center">
@@ -45,7 +43,6 @@ const RegisterPage = () => {
           <CardContent>
             <RegisterForm />
 
-            {/* Additional Links */}
             <div className="mt-6 space-y-4">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -72,22 +69,6 @@ const RegisterPage = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Footer */}
-        <div className="text-center text-xs text-muted-foreground space-y-2">
-          <p>© 2025 Music Streaming Platform. All rights reserved.</p>
-          <div className="flex justify-center space-x-4">
-            <Link href="/terms" className="hover:text-primary">
-              Terms
-            </Link>
-            <Link href="/privacy" className="hover:text-primary">
-              Privacy
-            </Link>
-            <Link href="/help" className="hover:text-primary">
-              Help
-            </Link>
-          </div>
-        </div>
       </div>
     </div>
   );

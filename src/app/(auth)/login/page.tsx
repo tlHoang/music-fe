@@ -17,7 +17,6 @@ const LoginPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
       <div className="w-full max-w-md space-y-6">
-        {/* Logo/Brand Section */}
         <div className="text-center space-y-2">
           <div className="flex justify-center">
             <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center">
@@ -34,7 +33,6 @@ const LoginPage = () => {
           <p className="text-muted-foreground">Sign in to your music account</p>
         </div>
 
-        {/* Login Card */}
         <Card className="shadow-lg border-0 bg-card/50 backdrop-blur-sm">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-2xl text-center">Sign In</CardTitle>
@@ -42,7 +40,6 @@ const LoginPage = () => {
           <CardContent>
             <LoginForm setReactiveModalState={setIsOpen} />
 
-            {/* Additional Links */}
             <div className="mt-6 space-y-4">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">

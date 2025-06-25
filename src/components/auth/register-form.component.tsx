@@ -40,7 +40,8 @@ const RegisterForm = () => {
     } else if (formData.username.length < 3) {
       newErrors.username = "Username must be at least 3 characters";
     } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
-      newErrors.username = "Username can only contain letters, numbers, and underscores";
+      newErrors.username =
+        "Username can only contain letters, numbers, and underscores";
     }
 
     // Email validation
@@ -157,7 +158,9 @@ const RegisterForm = () => {
             disabled={isLoading}
           />
         </div>
-        {errors.username && <p className="text-sm text-red-600">{errors.username}</p>}
+        {errors.username && (
+          <p className="text-sm text-red-600">{errors.username}</p>
+        )}
       </div>
 
       {/* Email Field */}

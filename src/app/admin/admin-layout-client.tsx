@@ -35,7 +35,8 @@ export const AdminLayoutClient = ({ children }: AdminLayoutClientProps) => {
   }, []);
 
   // Navigation items
-  const navItems = [    {
+  const navItems = [
+    {
       icon: LuLayoutDashboard,
       title: "Dashboard",
       href: "/admin/dashboard",
@@ -58,7 +59,8 @@ export const AdminLayoutClient = ({ children }: AdminLayoutClientProps) => {
       title: "Playlists",
       href: "/admin/playlists",
       active: mounted && pathname === "/admin/playlists",
-    },    {
+    },
+    {
       icon: LuFlag,
       title: "Reports",
       href: "/admin/reports",
