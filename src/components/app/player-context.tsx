@@ -23,6 +23,7 @@ interface Track {
   visibility?: string;
   duration?: number;
   uploadDate?: string;
+  lyrics?: string;
 }
 
 interface PlayerContextType {
@@ -87,7 +88,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
         audioRef.current.removeEventListener("ended", handleTrackEnded);
       }
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Ensure the audio URL is complete with the API base URL if needed
   const getFullAudioUrl = (url: string) => {
@@ -212,7 +213,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
         console.error("Error setting audio source:", error);
       }
     }
-  }, [currentTrack, isSeeking]);
+  }, [currentTrack, isSeeking]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Handle play/pause state changes
   useEffect(() => {
@@ -263,7 +264,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
         }
       }
     }
-  }, [isShuffle]);
+  }, [isShuffle]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const shuffleArray = (array: any[]) => {
     for (let i = array.length - 1; i > 0; i--) {
@@ -298,7 +299,7 @@ export const PlayerProvider = ({ children }: { children: React.ReactNode }) => {
         }
       };
     }
-  }, [playlist, currentTrackIndex]); // Re-attach when playlist or current index changes
+  }, [playlist, currentTrackIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Track play count by calling the backend API
   const trackPlayCount = async (trackId: string) => {

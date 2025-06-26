@@ -5,11 +5,14 @@ import { useSession } from "next-auth/react";
 import { sendRequest } from "@/utils/api";
 import MusicPlayer from "@/components/ui/music-player";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Link from "next/link";
 import { usePlayer } from "@/components/app/player-context";
 import LikeButton from "@/components/user/like-button.component";
 import CommentSection from "@/components/user/comment-section.component";
 import TrackCard from "@/components/user/track-card.component";
+import AddToPlaylistButton from "@/components/user/playlist/add-to-playlist-button";
+import { FileText } from "lucide-react";
 
 interface Track {
   _id: string;
@@ -21,6 +24,7 @@ interface Track {
   uploadDate: string;
   plays?: number;
   cover?: string; // Add cover field for signed cover URL
+  lyrics?: string;
 }
 
 const PlayerPage = () => {
@@ -29,6 +33,7 @@ const PlayerPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPlayerTime, setCurrentPlayerTime] = useState<number>(0);
+  const [showLyricsModal, setShowLyricsModal] = useState(false);
 
   // Get player context
   const {
@@ -212,16 +217,29 @@ const PlayerPage = () => {
                     }
                   }}
                   autoPlay={isPlaying}
-                />
-
-                {/* Like button for the current track */}
-                <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center">
+                />                {/* Like button for the current track */}
+                <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">                  <div className="flex items-center gap-3">
                     <LikeButton
                       songId={currentDisplayTrack._id}
                       size="md"
                       showCount={true}
                     />
+                    
+                    <AddToPlaylistButton
+                      trackId={currentDisplayTrack._id}
+                      size="md"
+                    />
+                    
+                    {currentDisplayTrack.lyrics && (
+                      <Button
+                        onClick={() => setShowLyricsModal(true)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <FileText className="mr-2" size={16} />
+                        View Lyrics
+                      </Button>
+                    )}
                   </div>
 
                   <div className="text-sm text-gray-500">
@@ -296,10 +314,28 @@ const PlayerPage = () => {
               <li>
                 • Open the Queue Manager to view and reorder your play queue
               </li>
-            </ul>
-          </div> */}
+            </ul>          </div> */}
         </div>
       </div>
+
+      {/* Lyrics Modal */}
+      <Dialog open={showLyricsModal} onOpenChange={setShowLyricsModal}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText size={20} />
+              Lyrics - {currentDisplayTrack?.title}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">            <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              by {(currentDisplayTrack as any)?.userId?.username || (currentDisplayTrack as any)?.artist || "Unknown Artist"}
+            </div>
+            <div className="whitespace-pre-line text-gray-800 dark:text-gray-200 leading-relaxed">
+              {currentDisplayTrack?.lyrics || "No lyrics available for this track."}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import { usePlayer } from "@/components/app/player-context";
@@ -20,6 +20,7 @@ import TrackCard from "@/components/user/track-card.component";
 import LikeButton from "@/components/user/like-button.component";
 import FollowPlaylistButton from "@/components/user/playlist/follow-playlist-button";
 import DraggablePlaylistTracks from "@/components/user/playlist/draggable-playlist-tracks";
+import BrowseAddTracksDialog from "@/components/user/playlist/browse-add-tracks-dialog";
 import { toast } from "sonner";
 
 interface PlaylistTrack {
@@ -130,58 +131,55 @@ export default function PlaylistPage() {
       month: "long",
       day: "numeric",
     });
-  };
+  };  // Fetch playlist data
+  const fetchPlaylistData = useCallback(async () => {
+    if (!playlistId) return;
 
-  // Fetch playlist data
-  useEffect(() => {
-    const fetchPlaylistData = async () => {
-      if (!playlistId) return;
+    try {
+      setLoading(true);
+      setError(null);
 
-      try {
-        setLoading(true);
-        setError(null);
-
-        const token = session?.user?.access_token;
-        const headers: HeadersInit = {};
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/playlists/${playlistId}`,
-          { headers }
-        );
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch playlist");
-        }
-
-        const result = await response.json();
-        console.log("Playlist API response:", result);
-
-        // Handle different response structures
-        if (result.data && result.data.data) {
-          // Handle nested structure: { data: { success: true, data: {...} } }
-          setPlaylist(result.data.data);
-        } else if (result.data && !result.data.data) {
-          // Handle structure: { data: {...} }
-          setPlaylist(result.data);
-        } else if (result.success && result.data) {
-          // Handle structure: { success: true, data: {...} }
-          setPlaylist(result.data);
-        } else {
-          setError("Failed to load playlist data");
-        }
-      } catch (err) {
-        console.error("Error fetching playlist:", err);
-        setError("An error occurred while fetching the playlist");
-      } finally {
-        setLoading(false);
+      const token = session?.user?.access_token;
+      const headers: HeadersInit = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
       }
-    };
 
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/playlists/${playlistId}`,
+        { headers }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch playlist");
+      }
+
+      const result = await response.json();
+      console.log("Playlist API response:", result);
+
+      // Handle different response structures
+      if (result.data && result.data.data) {
+        // Handle nested structure: { data: { success: true, data: {...} } }
+        setPlaylist(result.data.data);
+      } else if (result.data && !result.data.data) {
+        // Handle structure: { data: {...} }
+        setPlaylist(result.data);
+      } else if (result.success && result.data) {
+        // Handle structure: { success: true, data: {...} }
+        setPlaylist(result.data);
+      } else {
+        setError("Failed to load playlist data");
+      }
+    } catch (err) {
+      console.error("Error fetching playlist:", err);
+      setError("An error occurred while fetching the playlist");
+    } finally {
+      setLoading(false);
+    }
+  }, [playlistId, session?.user?.access_token]);
+  useEffect(() => {
     fetchPlaylistData();
-  }, [playlistId, session]);
+  }, [fetchPlaylistData]);
 
   if (loading) {
     return (
@@ -263,9 +261,7 @@ export default function PlaylistPage() {
                     {formatDate(playlist.createdAt)}
                   </span>
                 </div>
-              </div>
-
-              <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+              </div>              <div className="flex flex-wrap gap-3 justify-center md:justify-start">
                 <Button
                   onClick={playAllTracks}
                   className="bg-white text-black hover:bg-gray-100"
@@ -280,25 +276,24 @@ export default function PlaylistPage() {
                 >
                   <Shuffle size={18} className="mr-2" />
                   Shuffle
-                </Button>{" "}
+                </Button>
+                {isOwner && (
+                  <BrowseAddTracksDialog
+                    playlistId={playlistId}
+                    playlistSongs={playlist.songs.map(song => song._id)}
+                    onTrackAdded={() => {
+                      // Refresh playlist data when tracks are added
+                      fetchPlaylistData();
+                    }}
+                  />
+                )}{" "}
                 {/* Add follow and like buttons for the playlist */}
                 {!isOwner && (
                   <FollowPlaylistButton
                     playlistId={playlistId}
                     variant="button"
                     size="md"
-                    className="border-white text-black hover:bg-white/20"
-                  />
-                )}
-                {isOwner && (
-                  <Link href={`/playlist/${playlistId}/edit`}>
-                    <Button
-                      variant="outline"
-                      className="border-white text-black hover:bg-white/20"
-                    >
-                      Edit Playlist
-                    </Button>
-                  </Link>
+                    className="border-white text-black hover:bg-white/20"                  />
                 )}
               </div>
             </div>

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import {
   Play,
   Pause,
@@ -26,12 +27,14 @@ import {
   Eye,
   HeadphonesIcon,
   Flag,
+  FileText,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { toast } from "sonner";
 import LikeButton from "@/components/user/like-button.component";
 import FlagReportDialog from "@/components/user/flag-report-dialog";
+import AddToPlaylistButton from "@/components/user/playlist/add-to-playlist-button";
 
 interface TrackUser {
   _id: string;
@@ -55,6 +58,7 @@ interface Track {
   commentCount?: number;
   description?: string;
   isLiked?: boolean;
+  lyrics?: string;
 }
 
 interface Comment {
@@ -74,7 +78,6 @@ export default function TrackDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const trackId = params?.trackId as string;
-
   const [track, setTrack] = useState<Track | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [relatedTracks, setRelatedTracks] = useState<Track[]>([]);
@@ -84,16 +87,16 @@ export default function TrackDetailsPage() {
   const [submittingComment, setSubmittingComment] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showFlagDialog, setShowFlagDialog] = useState(false);
+  const [showLyricsModal, setShowLyricsModal] = useState(false);
 
   const { playTrack, currentTrack, isPlaying, togglePlayPause } = usePlayer();
-
   useEffect(() => {
     if (trackId) {
       fetchTrackDetails();
       fetchComments();
       fetchRelatedTracks();
     }
-  }, [trackId]);
+  }, [trackId, session?.user?.access_token]); // eslint-disable-line react-hooks/exhaustive-deps
   const fetchTrackDetails = async () => {
     if (!trackId) return;
 
@@ -144,12 +147,23 @@ export default function TrackDetailsPage() {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/comments/song/${trackId}`,
         { headers }
-      );
-
-      if (response.ok) {
+      );      if (response.ok) {
         const result = await response.json();
-        if (result.success && Array.isArray(result.data)) {
+        console.log("Comments API response:", result);
+        
+        // Handle different response structures
+        if (Array.isArray(result)) {
+          // Direct array response
+          setComments(result);
+        } else if (result.success && Array.isArray(result.data)) {
+          // Wrapped response
           setComments(result.data);
+        } else if (result.data && Array.isArray(result.data)) {
+          // Response with data property
+          setComments(result.data);
+        } else {
+          // Fallback - treat as empty
+          setComments([]);
         }
       }
     } catch (error) {
@@ -381,8 +395,7 @@ export default function TrackDetailsPage() {
                         {track.likeCount.toLocaleString()} likes
                       </div>
                     )}
-                  </div>
-                  {/* Action Buttons */}
+                  </div>                  {/* Action Buttons */}
                   <div className="flex flex-wrap gap-3">
                     <Button
                       onClick={handlePlayToggle}
@@ -404,7 +417,22 @@ export default function TrackDetailsPage() {
                         size="lg"
                         song={track}
                       />
-                    )}{" "}
+                    )}{" "}                    {track.lyrics && (
+                      <Button
+                        onClick={() => setShowLyricsModal(true)}
+                        variant="outline"
+                        size="lg"
+                      >
+                        <FileText className="mr-2" size={20} />
+                        View Lyrics
+                      </Button>
+                    )}
+                    {session?.user && (
+                      <AddToPlaylistButton
+                        trackId={track._id}
+                        size="lg"
+                      />
+                    )}
                     <Button onClick={handleShare} variant="outline" size="lg">
                       <Share2 className="mr-2" size={20} />
                       Share
@@ -654,14 +682,33 @@ export default function TrackDetailsPage() {
 
       {/* Flag Report Dialog */}
       {track && (
-        <FlagReportDialog
-          trackId={track._id}
+        <FlagReportDialog          trackId={track._id}
           trackTitle={track.title}
           trackArtist={track.userId.name || track.userId.username}
           isOpen={showFlagDialog}
           onClose={() => setShowFlagDialog(false)}
         />
       )}
+
+      {/* Lyrics Modal */}
+      <Dialog open={showLyricsModal} onOpenChange={setShowLyricsModal}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText size={20} />
+              Lyrics - {track?.title}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              by {track?.userId.name || track?.userId.username}
+            </div>
+            <div className="whitespace-pre-line text-gray-800 dark:text-gray-200 leading-relaxed">
+              {track?.lyrics || "No lyrics available for this track."}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

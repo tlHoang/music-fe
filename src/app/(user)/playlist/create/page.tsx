@@ -124,9 +124,7 @@ export default function CreatePlaylistPage() {
         const errorMessage = data.data ? data.data.message : data.message;
         toast.error(errorMessage || "Failed to create playlist");
         return;
-      }
-
-      // Check for different success response formats
+      }      // Check for different success response formats
       if (response.ok) {
         let playlistId;
 
@@ -134,7 +132,11 @@ export default function CreatePlaylistPage() {
         if (data._id) {
           playlistId = data._id;
         }
-        // Handle nested data structure format
+        // Handle nested data structure format (most common)
+        else if (data.data && data.data.data && data.data.data._id) {
+          playlistId = data.data.data._id;
+        }
+        // Handle single nested data structure format
         else if (data.data && data.data._id) {
           playlistId = data.data._id;
         }

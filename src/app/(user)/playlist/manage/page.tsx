@@ -86,11 +86,11 @@ export default function ManagePlaylistsPage() {
     name: "",
     visibility: "PUBLIC",
   });
-
   // Song search state
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ISong[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchType, setSearchType] = useState<"title" | "lyrics">("title");
 
   useEffect(() => {
     if (session?.user) {
@@ -309,15 +309,21 @@ export default function ManagePlaylistsPage() {
 
     setSearchLoading(true);
     try {
-      console.log("Searching for songs with query:", searchQuery);
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/songs/search?query=${encodeURIComponent(searchQuery)}`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.user.access_token}`,
-          },
-        }
+      console.log(
+        `Searching for songs with query: "${searchQuery}" using ${searchType} search`
       );
+
+      // Use different endpoints based on search type
+      const searchEndpoint =
+        searchType === "lyrics"
+          ? `${process.env.NEXT_PUBLIC_API_URL}/songs/search/lyrics?q=${encodeURIComponent(searchQuery)}&limit=20`
+          : `${process.env.NEXT_PUBLIC_API_URL}/songs/search?query=${encodeURIComponent(searchQuery)}`;
+
+      const response = await fetch(searchEndpoint, {
+        headers: {
+          Authorization: `Bearer ${session.user.access_token}`,
+        },
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -337,9 +343,14 @@ export default function ManagePlaylistsPage() {
         Array.isArray(responseData.data?.data)
       ) {
         songs = responseData.data.data;
+      } else if (Array.isArray(responseData.songs)) {
+        // Handle lyrics search response format
+        songs = responseData.songs;
       }
 
-      console.log(`Found ${songs.length} songs matching '${searchQuery}'`);
+      console.log(
+        `Found ${songs.length} songs matching '${searchQuery}' using ${searchType} search`
+      );
       setSearchResults(songs);
     } catch (error) {
       console.error("Error searching songs:", error);
@@ -447,6 +458,92 @@ export default function ManagePlaylistsPage() {
       toast.error("Failed to add song to playlist");
     }
   };
+
+  const handleAddTop5Songs = async () => {
+    if (
+      !selectedPlaylist ||
+      !session?.user?.access_token ||
+      searchResults.length === 0
+    )
+      return;
+
+    const top5Songs = searchResults.slice(0, 5);
+    let successCount = 0;
+    let duplicateCount = 0;
+    let errorCount = 0;
+
+    setSearchLoading(true);
+    toast.info(`Adding top ${top5Songs.length} songs to playlist...`);
+
+    for (const song of top5Songs) {
+      try {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/playlists/${selectedPlaylist._id}/songs/${song._id}`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${session.user.access_token}`,
+            },
+          }
+        );
+
+        const data = await response.json();
+
+        // Check for 409 Conflict status code which indicates song already exists
+        if (response.status === 409) {
+          duplicateCount++;
+          continue;
+        }
+
+        // Check for duplicate cases
+        if (
+          (data.success === false &&
+            data.message === "Song already exists in this playlist") ||
+          (data.data?.success === false &&
+            data.data?.message === "Song already exists in this playlist")
+        ) {
+          duplicateCount++;
+          continue;
+        }
+
+        if (response.ok) {
+          successCount++;
+        } else {
+          errorCount++;
+        }
+      } catch (error) {
+        console.error(`Error adding song ${song.title} to playlist:`, error);
+        errorCount++;
+      }
+    }
+
+    setSearchLoading(false);
+
+    // Show summary toast
+    let message = "";
+    if (successCount > 0) {
+      message += `${successCount} songs added successfully`;
+    }
+    if (duplicateCount > 0) {
+      if (message) message += ", ";
+      message += `${duplicateCount} songs already in playlist`;
+    }
+    if (errorCount > 0) {
+      if (message) message += ", ";
+      message += `${errorCount} songs failed to add`;
+    }
+
+    if (successCount > 0) {
+      toast.success(message);
+      // Refresh the playlist data
+      fetchUserPlaylists();
+    } else if (duplicateCount > 0 && errorCount === 0) {
+      toast.info(message);
+    } else {
+      toast.error(message || "Failed to add songs to playlist");
+    }
+  };
+
   const handleRemoveSongFromPlaylist = async (
     playlistId: string,
     songId: string
@@ -853,12 +950,42 @@ export default function ManagePlaylistsPage() {
         onOpenChange={setSongSearchDialogOpen}
       >
         <DialogContent className="max-w-3xl">
+          {" "}
           <DialogHeader>
             <DialogTitle>Add Songs to {selectedPlaylist?.name}</DialogTitle>
             <DialogDescription>
               Search for songs to add to your playlist
             </DialogDescription>
           </DialogHeader>
+          {/* Search Type Toggle */}
+          <div className="flex items-center justify-left">
+            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-1 flex">
+              <Button
+                variant={searchType === "title" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setSearchType("title")}
+                className={
+                  searchType === "title"
+                    ? "bg-gray-600 dark:bg-gray-700 shadow-sm"
+                    : ""
+                }
+              >
+                Title Search
+              </Button>
+              <Button
+                variant={searchType === "lyrics" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setSearchType("lyrics")}
+                className={
+                  searchType === "lyrics"
+                    ? "bg-gray-600 dark:bg-gray-700 shadow-sm"
+                    : ""
+                }
+              >
+                Lyrics Search
+              </Button>
+            </div>
+          </div>
           <div className="flex items-center space-x-2 my-4">
             <div className="relative flex-1">
               <Input
@@ -893,7 +1020,6 @@ export default function ManagePlaylistsPage() {
               )}
             </Button>
           </div>
-
           <div className="max-h-[400px] overflow-y-auto">
             {searchLoading ? (
               <div className="flex justify-center py-8">
@@ -924,9 +1050,31 @@ export default function ManagePlaylistsPage() {
               </div>
             ) : (
               <div>
-                <p className="text-sm text-gray-500 mb-2">
-                  Found {searchResults.length} songs matching "{searchQuery}"
-                </p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm text-gray-500">
+                    Found {searchResults.length} songs matching "{searchQuery}"
+                  </p>{" "}
+                  {searchResults.length > 0 && (
+                    <Button
+                      onClick={handleAddTop5Songs}
+                      disabled={searchLoading}
+                      size="sm"
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {searchLoading ? (
+                        <span className="flex items-center">
+                          <span className="animate-spin h-3 w-3 mr-1 border-2 border-white border-t-transparent rounded-full"></span>
+                          Adding...
+                        </span>
+                      ) : (
+                        <span className="flex items-center">
+                          <Plus size={14} className="mr-1" />
+                          Add Top {Math.min(5, searchResults.length)}
+                        </span>
+                      )}
+                    </Button>
+                  )}
+                </div>
                 <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                   {searchResults.map((song) => (
                     <li
@@ -969,7 +1117,6 @@ export default function ManagePlaylistsPage() {
               </div>
             )}
           </div>
-
           <DialogFooter>
             <Button
               variant="outline"

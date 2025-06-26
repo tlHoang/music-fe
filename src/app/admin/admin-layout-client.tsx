@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { installGlobalModalFix } from "@/utils/modalFix";
 import {
   LuLayoutDashboard,
   LuUsers,
@@ -28,10 +29,11 @@ export const AdminLayoutClient = ({ children }: AdminLayoutClientProps) => {
   const { data: session } = useSession();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-
   // Ensure component is mounted before showing active states
   useEffect(() => {
     setMounted(true);
+    // Install global modal fix for all admin pages
+    installGlobalModalFix();
   }, []);
 
   // Navigation items

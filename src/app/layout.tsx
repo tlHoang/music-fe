@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import SessionProviderWrapper from "./SessionProviderWrapper";
+import { GlobalModalFix } from "@/components/global-modal-fix";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,6 +41,7 @@ export default async function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
+            <GlobalModalFix />
             {/* <UserHeader /> Removed from root layout to prevent header on login/public pages */}
             {children}
           </ThemeProvider>

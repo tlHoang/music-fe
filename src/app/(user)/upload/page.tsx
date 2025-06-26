@@ -28,6 +28,7 @@ const UploadPage = () => {
   const { data: session } = useSession();
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
+  const [lyrics, setLyrics] = useState("");
   const [visibility, setVisibility] = useState("PUBLIC");
   const [selectedGenreIds, setSelectedGenreIds] = useState<string[]>([]);
   const [availableGenres, setAvailableGenres] = useState<Genre[]>([]);
@@ -123,17 +124,15 @@ const UploadPage = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!file || !title) {
-      setMessage("Please provide a file and title.");
+    e.preventDefault();    if (!file || !title || !lyrics.trim()) {
+      setMessage("Please provide a file, title, and lyrics.");
       return;
     }
 
     const formData = new FormData();
     formData.append("audio", file);
-    if (cover) formData.append("cover", cover);
-    formData.append("title", title);
+    if (cover) formData.append("cover", cover);    formData.append("title", title);
+    formData.append("lyrics", lyrics);
     formData.append("visibility", visibility);
     if (selectedGenreIds.length > 0) {
       selectedGenreIds.forEach((genreId) => {
@@ -193,10 +192,9 @@ const UploadPage = () => {
 
       if (!response.ok) {
         throw new Error("Failed to upload music");
-      }
-
-      setMessage("Upload successful!");
+      }      setMessage("Upload successful!");
       setTitle("");
+      setLyrics("");
       setVisibility("PUBLIC");
       setSelectedGenreIds([]);
       setFile(null);
@@ -248,14 +246,34 @@ const UploadPage = () => {
               Track Title*
             </label>
             <Input
-              id="title"
-              type="text"
+              id="title"              type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Give your track a name"
               required
               className="w-full"
             />
+          </div>
+
+          <div className="space-y-2">
+            <label
+              htmlFor="lyrics"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Lyrics*
+            </label>
+            <textarea
+              id="lyrics"
+              value={lyrics}
+              onChange={(e) => setLyrics(e.target.value)}
+              placeholder="Enter the song lyrics here..."
+              required
+              rows={6}
+              className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-vertical"
+            />
+            <p className="text-xs text-gray-500">
+              Lyrics are required for AI-powered search functionality
+            </p>
           </div>
 
           <div className="space-y-2">

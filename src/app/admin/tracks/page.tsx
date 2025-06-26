@@ -106,13 +106,10 @@ const formatDate = (dateString?: string) => {
   return new Date(dateString).toLocaleDateString();
 };
 
-const TrackRow = ({
-  track,
+const TrackRow = ({  track,
   onViewDetails,
   onEditTrack,
   onDeleteTrack,
-  onToggleVisibility,
-  onToggleFeatured,
   onPlay,
   currentlyPlaying,
   genreMap,
@@ -121,8 +118,6 @@ const TrackRow = ({
   onViewDetails: (trackId: string) => void;
   onEditTrack: (track: Track) => void;
   onDeleteTrack: (trackId: string) => void;
-  onToggleVisibility: (trackId: string, isPublic: boolean) => void;
-  onToggleFeatured: (trackId: string, isFeatured: boolean) => void;
   onPlay: (track: Track) => void;
   currentlyPlaying: string | null;
   genreMap: Record<string, string>;
@@ -226,27 +221,9 @@ const TrackRow = ({
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem onClick={() => onViewDetails(track._id)}>
-              View Details
-            </DropdownMenuItem>
+              View Details            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onEditTrack(track)}>
               Edit Track
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={() =>
-                onToggleVisibility(track._id, track.visibility !== "PRIVATE")
-              }
-            >
-              {track.visibility === "PRIVATE" ? "Make Public" : "Make Private"}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() =>
-                onToggleFeatured(track._id, !track.status?.includes("FEATURED"))
-              }
-            >
-              {track.status?.includes("FEATURED")
-                ? "Unfeature Track"
-                : "Feature Track"}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -264,6 +241,7 @@ const TrackRow = ({
 
 const TracksPage = () => {
   const { data: session } = useSession();
+  
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -420,11 +398,41 @@ const TracksPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };
-  useEffect(() => {
+  };  useEffect(() => {
     fetchTracks();
     fetchGenres();
   }, [session, currentPage]);
+
+  // Focus restoration effects for modal management
+  useEffect(() => {
+    if (!isDeleteDialogOpen && !isEditDialogOpen && !isViewDetailsDialogOpen) {
+      const timer = setTimeout(() => {
+        document.querySelectorAll('[data-radix-focus-guard]').forEach(trap => trap.remove());
+        if (document.activeElement !== document.body) {
+          document.body.focus();
+          document.body.blur();
+        }
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [isDeleteDialogOpen, isEditDialogOpen, isViewDetailsDialogOpen]);
+
+  useEffect(() => {
+    const handleGlobalClick = () => {
+      if (!isDeleteDialogOpen && !isEditDialogOpen && !isViewDetailsDialogOpen) {
+        document.querySelectorAll('[data-radix-focus-guard], [data-radix-portal]').forEach(el => {
+          el.remove();
+        });
+        document.body.style.pointerEvents = '';
+        document.body.style.overflow = '';
+        document.querySelectorAll('[inert]').forEach(el => {
+          el.removeAttribute('inert');
+        });
+      }
+    };
+    document.addEventListener('click', handleGlobalClick, true);
+    return () => document.removeEventListener('click', handleGlobalClick, true);
+  }, [isDeleteDialogOpen, isEditDialogOpen, isViewDetailsDialogOpen]);
 
   // Function to get genre name from genre ID
   const getGenreName = (genreIds: string[] | string | undefined): string => {
@@ -452,11 +460,8 @@ const TracksPage = () => {
       // Get the mapped genre name for comparison
       const trackGenreName = getGenreName(track.genres || track.genre);
       const matchesGenre =
-        genreFilter === "all" || trackGenreName === genreFilter;
-
-      const matchesStatus =
+        genreFilter === "all" || trackGenreName === genreFilter;      const matchesStatus =
         statusFilter === "all" ||
-        (statusFilter === "featured" && track.status?.includes("FEATURED")) ||
         (statusFilter === "public" && track.visibility !== "PRIVATE") ||
         (statusFilter === "private" && track.visibility === "PRIVATE");
 
@@ -491,8 +496,7 @@ const TracksPage = () => {
         };
       }
     }
-  };
-  // Handle viewing track details
+  };  // Handle viewing track details
   const handleViewDetails = async (trackId: string) => {
     const track = tracks.find((t) => t._id === trackId);
     if (track) {
@@ -561,68 +565,7 @@ const TracksPage = () => {
     } catch (error) {
       console.error("Error updating track:", error);
       toast.error("Failed to update track");
-    }
-  };
-
-  // Handle toggling track visibility
-  const handleToggleVisibility = async (trackId: string, isPublic: boolean) => {
-    if (!session?.user?.access_token) return;
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/admin/tracks/${trackId}/visibility`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.user.access_token}`,
-          },
-          body: JSON.stringify({ visibility: isPublic ? "PUBLIC" : "PRIVATE" }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      toast.success(`Track is now ${isPublic ? "public" : "private"}`);
-      fetchTracks(); // Refresh the tracks list
-    } catch (error) {
-      console.error("Error updating track visibility:", error);
-      toast.error("Failed to update track visibility");
-    }
-  };
-
-  // Handle featuring/unfeaturing a track
-  const handleToggleFeatured = async (trackId: string, isFeatured: boolean) => {
-    if (!session?.user?.access_token) return;
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/admin/tracks/${trackId}/feature`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.user.access_token}`,
-          },
-          body: JSON.stringify({ featured: isFeatured }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      toast.success(
-        isFeatured ? "Track is now featured" : "Track is no longer featured"
-      );
-      fetchTracks(); // Refresh the tracks list
-    } catch (error) {
-      console.error("Error updating track featured status:", error);
-      toast.error("Failed to update featured status");
-    }
-  };
+    }  };
 
   // Handle deleting a track
   const handleDeleteTrack = (trackId: string) => {
@@ -698,10 +641,8 @@ const TracksPage = () => {
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
+          </SelectTrigger>          <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="featured">Featured</SelectItem>
             <SelectItem value="public">Public</SelectItem>
             <SelectItem value="private">Private</SelectItem>
           </SelectContent>
@@ -759,15 +700,12 @@ const TracksPage = () => {
                     </TableRow>
                   ))
               ) : filteredTracks.length > 0 ? (
-                filteredTracks.map((track) => (
-                  <TrackRow
+                filteredTracks.map((track) => (                  <TrackRow
                     key={track._id}
                     track={track}
                     onViewDetails={handleViewDetails}
                     onEditTrack={handleEditTrack}
                     onDeleteTrack={handleDeleteTrack}
-                    onToggleVisibility={handleToggleVisibility}
-                    onToggleFeatured={handleToggleFeatured}
                     onPlay={handlePlayTrack}
                     currentlyPlaying={currentlyPlaying}
                     genreMap={genreMap}
@@ -1174,23 +1112,8 @@ const TracksPage = () => {
                         setIsViewDetailsDialogOpen(false);
                         handleEditTrack(detailTrack);
                       }}
-                    >
-                      <LuPencil className="h-4 w-4 mr-2" />
+                    >                      <LuPencil className="h-4 w-4 mr-2" />
                       Edit Track
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        handleToggleVisibility(
-                          detailTrack._id,
-                          detailTrack.visibility !== "PRIVATE"
-                        )
-                      }
-                    >
-                      {detailTrack.visibility === "PRIVATE"
-                        ? "Make Public"
-                        : "Make Private"}
                     </Button>
                     <Button
                       variant="destructive"
