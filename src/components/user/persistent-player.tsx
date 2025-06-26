@@ -3,8 +3,20 @@
 import React, { useState } from "react";
 import { usePlayer } from "@/components/app/player-context";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Play, Pause, SkipBack, SkipForward, Volume2, FileText } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Play,
+  Pause,
+  SkipBack,
+  SkipForward,
+  Volume2,
+  FileText,
+} from "lucide-react";
 import Link from "next/link";
 import LikeButton from "./like-button.component";
 import QueueManager from "./queue-manager";
@@ -54,7 +66,8 @@ export default function PersistentPlayer() {
                   currentTrack.artist ||
                   "Unknown Artist"}
               </div>
-            </div>            {/* Like button */}
+            </div>{" "}
+            {/* Like button */}
             {currentTrack._id && (
               <div className="ml-2 flex gap-1">
                 <LikeButton
@@ -81,7 +94,6 @@ export default function PersistentPlayer() {
             >
               <SkipBack size={18} />
             </Button>
-
             <Button
               onClick={togglePlayPause}
               size="icon"
@@ -93,7 +105,6 @@ export default function PersistentPlayer() {
                 <Play size={18} className="ml-0.5" />
               )}
             </Button>
-
             <Button
               variant="ghost"
               size="icon"
@@ -102,16 +113,15 @@ export default function PersistentPlayer() {
             >
               <SkipForward size={18} />
             </Button>
-
             {playlist.length > 0 && (
               <div className="text-xs text-gray-500 ml-1">
                 {currentTrackIndex + 1}/{playlist.length}
               </div>
-            )}            {/* Queue Manager Button */}
+            )}{" "}
+            {/* Queue Manager Button */}
             <div className="ml-3">
               <QueueManager />
             </div>
-
             {/* Lyrics Button */}
             {currentTrack?.lyrics && (
               <Button
@@ -132,7 +142,8 @@ export default function PersistentPlayer() {
               <Button variant="outline" size="sm">
                 Full Player
               </Button>
-            </Link>          </div>
+            </Link>{" "}
+          </div>
         </div>
       </div>
 
@@ -147,7 +158,10 @@ export default function PersistentPlayer() {
           </DialogHeader>
           <div className="mt-4">
             <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              by {(currentTrack as any)?.userId?.username || currentTrack?.artist || "Unknown Artist"}
+              by{" "}
+              {(currentTrack as any)?.userId?.username ||
+                currentTrack?.artist ||
+                "Unknown Artist"}
             </div>
             <div className="whitespace-pre-line text-gray-800 dark:text-gray-200 leading-relaxed">
               {currentTrack?.lyrics || "No lyrics available for this track."}

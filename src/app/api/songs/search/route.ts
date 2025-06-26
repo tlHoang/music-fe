@@ -1,17 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 export async function GET(request: NextRequest) {
   try {
     const token = await getToken({ req: request });
-    
+
     // Get the search query from URL parameters
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('query');
-    
+    const query = searchParams.get("query");
+
     if (!query) {
       return NextResponse.json(
-        { error: 'Query parameter is required' },
+        { error: "Query parameter is required" },
         { status: 400 }
       );
     }
@@ -19,9 +19,9 @@ export async function GET(request: NextRequest) {
     // Forward the request to the backend
     const backendUrl = `${process.env.BACKEND_URL}/songs/search?query=${encodeURIComponent(query)}`;
     const headers: HeadersInit = {};
-    
+
     if (token?.user?.access_token) {
-      headers['Authorization'] = `Bearer ${token.user.access_token}`;
+      headers["Authorization"] = `Bearer ${token.user.access_token}`;
     }
 
     const response = await fetch(backendUrl, { headers });
@@ -29,9 +29,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error('Error in songs search API:', error);
+    console.error("Error in songs search API:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }

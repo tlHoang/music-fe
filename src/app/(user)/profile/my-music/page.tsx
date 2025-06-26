@@ -42,7 +42,7 @@ interface ISong {
 
 const MyMusicPage = () => {
   const { data: session } = useSession();
-  
+
   const [songs, setSongs] = useState<ISong[]>([]);
   const [loading, setLoading] = useState(true);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -59,7 +59,7 @@ const MyMusicPage = () => {
   const { pageRef, storeFocusedElement, createCloseHandler } = useFocusRestore([
     isEditDialogOpen,
     isDeleteDialogOpen,
-    isLyricsDialogOpen
+    isLyricsDialogOpen,
   ]);
 
   const fetchUserSongs = useCallback(async () => {
@@ -96,16 +96,18 @@ const MyMusicPage = () => {
       // Small delay to ensure DOM has updated
       const timer = setTimeout(() => {
         // Remove any residual focus traps
-        const focusTraps = document.querySelectorAll('[data-radix-focus-guard]');
-        focusTraps.forEach(trap => trap.remove());
-        
+        const focusTraps = document.querySelectorAll(
+          "[data-radix-focus-guard]"
+        );
+        focusTraps.forEach((trap) => trap.remove());
+
         // Restore focus to body
         if (document.activeElement !== document.body) {
           document.body.focus();
           document.body.blur();
         }
       }, 150);
-      
+
       return () => clearTimeout(timer);
     }
   }, [isEditDialogOpen, isDeleteDialogOpen, isLyricsDialogOpen]);
@@ -115,20 +117,23 @@ const MyMusicPage = () => {
     const handleGlobalClick = () => {
       // If no modals are open and the page seems non-interactive, force cleanup
       if (!isEditDialogOpen && !isDeleteDialogOpen && !isLyricsDialogOpen) {
-        document.querySelectorAll('[data-radix-focus-guard], [data-radix-portal]').forEach(el => {
-          el.remove();
-        });
-        document.body.style.pointerEvents = '';
-        document.body.style.overflow = '';
-        document.querySelectorAll('[inert]').forEach(el => {
-          el.removeAttribute('inert');
+        document
+          .querySelectorAll("[data-radix-focus-guard], [data-radix-portal]")
+          .forEach((el) => {
+            el.remove();
+          });
+        document.body.style.pointerEvents = "";
+        document.body.style.overflow = "";
+        document.querySelectorAll("[inert]").forEach((el) => {
+          el.removeAttribute("inert");
         });
       }
     };
 
-    document.addEventListener('click', handleGlobalClick, true);
-    return () => document.removeEventListener('click', handleGlobalClick, true);
-  }, [isEditDialogOpen, isDeleteDialogOpen, isLyricsDialogOpen]);  const handleEditSong = (song: ISong) => {
+    document.addEventListener("click", handleGlobalClick, true);
+    return () => document.removeEventListener("click", handleGlobalClick, true);
+  }, [isEditDialogOpen, isDeleteDialogOpen, isLyricsDialogOpen]);
+  const handleEditSong = (song: ISong) => {
     storeFocusedElement();
     setCurrentSong(song);
     setEditTitle(song.title);
@@ -141,12 +146,12 @@ const MyMusicPage = () => {
     setCurrentSong(song);
     setIsDeleteDialogOpen(true);
   };
-  
+
   const handleViewLyrics = (song: ISong) => {
     storeFocusedElement();
     setCurrentSong(song);
     setIsLyricsDialogOpen(true);
-  };  // Create close handlers using the hook
+  }; // Create close handlers using the hook
   const handleCloseLyricsDialog = createCloseHandler(() => {
     setIsLyricsDialogOpen(false);
     setCurrentSong(null);
@@ -189,7 +194,8 @@ const MyMusicPage = () => {
             song._id === currentSong._id
               ? { ...song, title: editTitle, visibility: editVisibility }
               : song
-          )        );
+          )
+        );
         setMessage("Track updated successfully!");
         handleCloseEditDialog();
       }
@@ -217,7 +223,8 @@ const MyMusicPage = () => {
       console.log(response);
 
       // First check if we have a success property in the response
-      if (response.success) {        // Remove song from local state
+      if (response.success) {
+        // Remove song from local state
         setSongs(songs.filter((song) => song._id !== currentSong._id));
         setMessage(`Track "${currentSong.title}" deleted successfully!`);
         handleCloseDeleteDialog();
@@ -273,12 +280,12 @@ const MyMusicPage = () => {
           </Link>
         </div>
       </div>
-
       {message && (
         <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded mb-4">
           {message}
         </div>
-      )}      {songs.length === 0 ? (
+      )}{" "}
+      {songs.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg">
           <h2 className="text-xl font-semibold text-gray-700 mb-2">
             You haven't uploaded any tracks yet
@@ -335,7 +342,8 @@ const MyMusicPage = () => {
                         <div className="h-10 w-10 flex-shrink-0 bg-gray-200 rounded-md mr-4"></div>
                       )}
                       <div className="text-sm font-medium text-gray-900">
-                        {song.title}                      </div>
+                        {song.title}{" "}
+                      </div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -357,15 +365,15 @@ const MyMusicPage = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {song.lyrics ? (                      <button
+                    {song.lyrics ? (
+                      <button
                         onClick={() => handleViewLyrics(song)}
                         className="hover:text-blue-600 transition-colors cursor-pointer"
                       >
                         View
                       </button>
-                    ) : (                      <span>
-                        None
-                      </span>
+                    ) : (
+                      <span>None</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -380,7 +388,9 @@ const MyMusicPage = () => {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
                         {song.lyrics && (
-                          <DropdownMenuItem onClick={() => handleViewLyrics(song)}>
+                          <DropdownMenuItem
+                            onClick={() => handleViewLyrics(song)}
+                          >
                             <FileText className="mr-2 h-4 w-4" />
                             View Lyrics
                           </DropdownMenuItem>
@@ -401,10 +411,14 @@ const MyMusicPage = () => {
             </tbody>
           </table>
         </div>
-      )}      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
-        if (!open) handleCloseEditDialog();
-      }}>
+      )}{" "}
+      {/* Edit Dialog */}
+      <Dialog
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCloseEditDialog();
+        }}
+      >
         <DialogTrigger asChild />
         <DialogContent>
           <DialogHeader>
@@ -420,17 +434,22 @@ const MyMusicPage = () => {
                 className="w-full"
               />
             </div>
-          </div>          <DialogFooter>
+          </div>{" "}
+          <DialogFooter>
             <Button variant="outline" onClick={handleCloseEditDialog}>
               Cancel
             </Button>
             <Button onClick={saveEditedSong}>Save</Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={(open) => {
-        if (!open) handleCloseDeleteDialog();
-      }}>
+      </Dialog>{" "}
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={isDeleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCloseDeleteDialog();
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Delete Track</DialogTitle>
@@ -438,11 +457,9 @@ const MyMusicPage = () => {
               Are you sure you want to delete "{currentSong?.title}"? This
               action cannot be undone.
             </DialogDescription>
-          </DialogHeader>          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={handleCloseDeleteDialog}
-            >
+          </DialogHeader>{" "}
+          <DialogFooter>
+            <Button variant="outline" onClick={handleCloseDeleteDialog}>
               Cancel
             </Button>
             <Button variant="destructive" onClick={deleteSong}>
@@ -450,16 +467,18 @@ const MyMusicPage = () => {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>      {/* Lyrics Dialog */}
-      <Dialog open={isLyricsDialogOpen} onOpenChange={(open) => {
-        if (!open) handleCloseLyricsDialog();
-      }}>
+      </Dialog>{" "}
+      {/* Lyrics Dialog */}
+      <Dialog
+        open={isLyricsDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) handleCloseLyricsDialog();
+        }}
+      >
         <DialogContent className="max-w-2xl max-h-[80vh]">
           <DialogHeader>
             <DialogTitle>Lyrics - {currentSong?.title}</DialogTitle>
-            <DialogDescription>
-              Song lyrics for your track
-            </DialogDescription>
+            <DialogDescription>Song lyrics for your track</DialogDescription>
           </DialogHeader>
           <div className="overflow-y-auto max-h-96 p-4 bg-gray-50 rounded-lg">
             {currentSong?.lyrics ? (
@@ -471,10 +490,9 @@ const MyMusicPage = () => {
                 No lyrics available for this track.
               </p>
             )}
-          </div>          <DialogFooter>
-            <Button onClick={handleCloseLyricsDialog}>
-              Close
-            </Button>
+          </div>{" "}
+          <DialogFooter>
+            <Button onClick={handleCloseLyricsDialog}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -65,7 +65,8 @@ const TracksPage = () => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [genres, setGenres] = useState<Genre[]>([]);
   const [loading, setLoading] = useState(true);
-  const [genresLoading, setGenresLoading] = useState(false);  const [searchQuery, setSearchQuery] = useState("");
+  const [genresLoading, setGenresLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [searchType, setSearchType] = useState<"title" | "lyrics">("title");
   const [selectedGenre, setSelectedGenre] = useState<string>("all");
@@ -116,7 +117,8 @@ const TracksPage = () => {
       // Only fetch tracks when session is available and component is initialized
       setCurrentPage(1);
       fetchTracks(1);
-    }  }, [
+    }
+  }, [
     selectedGenre,
     visibility,
     sortBy,
@@ -178,16 +180,19 @@ const TracksPage = () => {
         headers: session?.user?.access_token
           ? { Authorization: `Bearer ${session.user.access_token}` }
           : {},
-      });      console.log("Lyrics Search API Response:", response);
-      
+      });
+      console.log("Lyrics Search API Response:", response);
+
       if (response.data && response.data.data) {
         const fetchedTracks = response.data.data;
         console.log("Raw fetched tracks:", fetchedTracks.length);
         console.log("Actual fetched tracks:", fetchedTracks);
-        
+
         // For lyrics search, we don't apply genre filtering since it's based on semantic similarity
         // The most relevant results should be shown regardless of genre
-        console.log("Lyrics search: skipping genre filter to preserve semantic relevance");
+        console.log(
+          "Lyrics search: skipping genre filter to preserve semantic relevance"
+        );
 
         console.log(`Found ${fetchedTracks.length} tracks by lyrics search`);
         if (page === 1) {
@@ -368,8 +373,12 @@ const TracksPage = () => {
       {/* Search and Filters */}
       <Card className="mb-8">
         <CardContent className="p-6">
-          <div className="space-y-4">            {/* Search Bar */}
-            <form onSubmit={handleSearch} className="space-y-3">              {/* Modern Search Type Toggle */}
+          <div className="space-y-4">
+            {" "}
+            {/* Search Bar */}
+            <form onSubmit={handleSearch} className="space-y-3">
+              {" "}
+              {/* Modern Search Type Toggle */}
               <div className="flex items-center justify-start">
                 <div className="flex items-center p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
                   <button
@@ -398,7 +407,6 @@ const TracksPage = () => {
                   </button>
                 </div>
               </div>
-              
               {/* Search Input */}
               <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -421,27 +429,38 @@ const TracksPage = () => {
                 <Button type="submit">
                   <Search size={16} className="mr-2" />
                   Search
-                </Button>              </div>
-            </form>            {/* Search Type Information */}
+                </Button>{" "}
+              </div>
+            </form>{" "}
+            {/* Search Type Information */}
             {searchType === "lyrics" && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">                <div className="flex items-start gap-2">
-                  <Search size={16} className="text-blue-600 dark:text-blue-400 mt-0.5" />
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                {" "}
+                <div className="flex items-start gap-2">
+                  <Search
+                    size={16}
+                    className="text-blue-600 dark:text-blue-400 mt-0.5"
+                  />
                   <div className="text-sm text-blue-800 dark:text-blue-200">
-                    <strong>Lyrics Search:</strong> Search for themes, emotions, or specific phrases within song lyrics.
+                    <strong>Lyrics Search:</strong> Search for themes, emotions,
+                    or specific phrases within song lyrics.
                     <br />
-                    <em>Note: Genre filters are disabled for lyrics search to preserve semantic relevance.</em>
+                    <em>
+                      Note: Genre filters are disabled for lyrics search to
+                      preserve semantic relevance.
+                    </em>
                   </div>
                 </div>
               </div>
             )}
-
             {/* Filters */}
             <div className="flex flex-wrap gap-4">
               <div className="flex items-center gap-2">
                 <Filter size={16} />
                 <span className="text-sm font-medium">Filters:</span>
-              </div>{" "}              <Select 
-                value={selectedGenre} 
+              </div>{" "}
+              <Select
+                value={selectedGenre}
                 onValueChange={setSelectedGenre}
                 disabled={searchType === "lyrics"}
               >
@@ -458,9 +477,10 @@ const TracksPage = () => {
                       </SelectItem>
                     );
                   })}
-                </SelectContent>              </Select>
-              <Select 
-                value={sortBy} 
+                </SelectContent>{" "}
+              </Select>
+              <Select
+                value={sortBy}
                 onValueChange={setSortBy}
                 disabled={searchType === "lyrics"}
               >
@@ -517,7 +537,8 @@ const TracksPage = () => {
         <Card>
           <CardContent className="p-12 text-center">
             <Music className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No tracks found</h3>            <p className="text-gray-500">
+            <h3 className="text-xl font-semibold mb-2">No tracks found</h3>{" "}
+            <p className="text-gray-500">
               {searchQuery
                 ? searchType === "lyrics"
                   ? "No tracks found with matching lyrics. Try using different keywords or switch to title search."
@@ -596,7 +617,8 @@ const TracksPage = () => {
                       <span className="flex items-center">
                         <Clock size={14} className="mr-1" />
                         {formatDuration(track.duration)}
-                      </span>                      <div className="flex items-center gap-3">
+                      </span>{" "}
+                      <div className="flex items-center gap-3">
                         {track.likeCount !== undefined && (
                           <span className="flex items-center">
                             <Heart size={14} className="mr-1" />

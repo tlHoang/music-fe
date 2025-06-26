@@ -13,15 +13,15 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Plus, 
-  Search, 
-  PlayCircle, 
-  Clock, 
+import {
+  Plus,
+  Search,
+  PlayCircle,
+  Clock,
   Calendar,
   Music2,
   Loader2,
-  CheckCircle
+  CheckCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -74,67 +74,71 @@ export default function BrowseAddTracksDialog({
       <Plus size={18} className="mr-2" />
       Add Tracks
     </Button>
-  );  // Search for tracks
-  const searchTracks = useCallback(async (query: string, type: "title" | "lyrics") => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      if (type === "lyrics") {
-        // Use the same approach as tracks page for lyrics search
-        const params = new URLSearchParams();
-        params.append("q", query.trim());
-        params.append("limit", "20");
-        params.append("threshold", "0.7");
-
-        const url = `${process.env.NEXT_PUBLIC_API_URL}/songs/search/lyrics?${params.toString()}`;
-        
-        const response = await sendRequest<any>({
-          url,
-          method: "GET",
-          headers: session?.user?.access_token
-            ? { Authorization: `Bearer ${session.user.access_token}` }
-            : {},
-        });        if (response.data && response.data.data) {
-          setSearchResults(response.data.data);
-        } else {
-          setSearchResults([]);
-        }
-      } else {
-        // Use the same approach as tracks page for title search
-        const params = new URLSearchParams();
-        params.append("search", query.trim());
-        params.append("visibility", "PUBLIC");
-        params.append("limit", "20");
-        params.append("page", "1");
-
-        const url = `${process.env.NEXT_PUBLIC_API_URL}/songs/search?${params.toString()}`;
-        
-        const response = await sendRequest<any>({
-          url,
-          method: "GET",
-          headers: session?.user?.access_token
-            ? { Authorization: `Bearer ${session.user.access_token}` }
-            : {},
-        });
-
-        if (response.data && response.data.data) {
-          setSearchResults(response.data.data);
-        } else {
-          setSearchResults([]);
-        }
+  ); // Search for tracks
+  const searchTracks = useCallback(
+    async (query: string, type: "title" | "lyrics") => {
+      if (!query.trim()) {
+        setSearchResults([]);
+        return;
       }
-    } catch (error) {
-      console.error("Error searching tracks:", error);
-      setSearchResults([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [session?.user?.access_token]);
+
+      try {
+        setLoading(true);
+
+        if (type === "lyrics") {
+          // Use the same approach as tracks page for lyrics search
+          const params = new URLSearchParams();
+          params.append("q", query.trim());
+          params.append("limit", "20");
+          params.append("threshold", "0.7");
+
+          const url = `${process.env.NEXT_PUBLIC_API_URL}/songs/search/lyrics?${params.toString()}`;
+
+          const response = await sendRequest<any>({
+            url,
+            method: "GET",
+            headers: session?.user?.access_token
+              ? { Authorization: `Bearer ${session.user.access_token}` }
+              : {},
+          });
+          if (response.data && response.data.data) {
+            setSearchResults(response.data.data);
+          } else {
+            setSearchResults([]);
+          }
+        } else {
+          // Use the same approach as tracks page for title search
+          const params = new URLSearchParams();
+          params.append("search", query.trim());
+          params.append("visibility", "PUBLIC");
+          params.append("limit", "20");
+          params.append("page", "1");
+
+          const url = `${process.env.NEXT_PUBLIC_API_URL}/songs/search?${params.toString()}`;
+
+          const response = await sendRequest<any>({
+            url,
+            method: "GET",
+            headers: session?.user?.access_token
+              ? { Authorization: `Bearer ${session.user.access_token}` }
+              : {},
+          });
+
+          if (response.data && response.data.data) {
+            setSearchResults(response.data.data);
+          } else {
+            setSearchResults([]);
+          }
+        }
+      } catch (error) {
+        console.error("Error searching tracks:", error);
+        setSearchResults([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [session?.user?.access_token]
+  );
 
   // Add track to playlist
   const addTrackToPlaylist = async (trackId: string) => {
@@ -149,7 +153,7 @@ export default function BrowseAddTracksDialog({
     }
 
     try {
-      setAddingTracks(prev => new Set([...prev, trackId]));
+      setAddingTracks((prev) => new Set([...prev, trackId]));
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/playlists/${playlistId}/songs/${trackId}`,
@@ -173,7 +177,7 @@ export default function BrowseAddTracksDialog({
       console.error("Error adding track:", error);
       toast.error("Failed to add track to playlist");
     } finally {
-      setAddingTracks(prev => {
+      setAddingTracks((prev) => {
         const newSet = new Set(prev);
         newSet.delete(trackId);
         return newSet;
@@ -183,9 +187,9 @@ export default function BrowseAddTracksDialog({
 
   // Add top 5 tracks
   const addTopTracks = async () => {
-    const topTracks = searchResults.slice(0, 5).filter(track => 
-      !playlistSongs.includes(track._id)
-    );
+    const topTracks = searchResults
+      .slice(0, 5)
+      .filter((track) => !playlistSongs.includes(track._id));
 
     if (topTracks.length === 0) {
       toast.info("No new tracks to add from top results");
@@ -195,7 +199,7 @@ export default function BrowseAddTracksDialog({
     try {
       setLoading(true);
       let addedCount = 0;
-      
+
       for (const track of topTracks) {
         try {
           const response = await fetch(
@@ -229,7 +233,7 @@ export default function BrowseAddTracksDialog({
     } finally {
       setLoading(false);
     }
-  };  // Handle search when query or type changes
+  }; // Handle search when query or type changes
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (searchQuery.trim()) {
@@ -256,9 +260,7 @@ export default function BrowseAddTracksDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || defaultTrigger}
-      </DialogTrigger>
+      <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Browse & Add Tracks</DialogTitle>
@@ -266,16 +268,24 @@ export default function BrowseAddTracksDialog({
 
         <div className="flex-1 overflow-hidden flex flex-col space-y-4">
           {/* Search Controls */}
-          <div className="space-y-3">            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+          <div className="space-y-3">
+            {" "}
+            <div className="relative">
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={16}
+              />
               <Input
-                placeholder={searchType === "lyrics" ? "Search by lyrics..." : "Search by title, artist..."}
+                placeholder={
+                  searchType === "lyrics"
+                    ? "Search by lyrics..."
+                    : "Search by title, artist..."
+                }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
-
             {/* Modern Search Mode Toggle */}
             <div className="flex items-center justify-between p-1 bg-gray-100 dark:bg-gray-800 rounded-lg">
               <button
@@ -301,13 +311,12 @@ export default function BrowseAddTracksDialog({
                 <span>Lyrics</span>
               </button>
             </div>
-
             {searchType === "lyrics" && (
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2 text-xs">
-                <strong>Lyrics Search:</strong> Find songs by themes, emotions, or specific phrases within lyrics.
+                <strong>Lyrics Search:</strong> Find songs by themes, emotions,
+                or specific phrases within lyrics.
               </div>
             )}
-
             {searchResults.length > 0 && (
               <div className="flex items-center justify-between">
                 <p className="text-sm text-gray-600">
@@ -355,16 +364,23 @@ export default function BrowseAddTracksDialog({
               {searchResults.map((track) => {
                 const isInPlaylist = playlistSongs.includes(track._id);
                 const isAdding = addingTracks.has(track._id);
-                
+
                 return (
                   <div
                     key={track._id}
                     className="flex items-center gap-4 p-3 border rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
-                  >                    {/* Cover Image */}
+                  >
+                    {" "}
+                    {/* Cover Image */}
                     <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-md overflow-hidden flex-shrink-0">
-                      {(track.cover || track.coverImage || track.thumbnail) ? (
+                      {track.cover || track.coverImage || track.thumbnail ? (
                         <Image
-                          src={track.cover || track.coverImage || track.thumbnail || ''}
+                          src={
+                            track.cover ||
+                            track.coverImage ||
+                            track.thumbnail ||
+                            ""
+                          }
                           alt={track.title}
                           width={48}
                           height={48}
@@ -376,7 +392,6 @@ export default function BrowseAddTracksDialog({
                         </div>
                       )}
                     </div>
-
                     {/* Track Info */}
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium truncate">{track.title}</h4>
@@ -399,7 +414,6 @@ export default function BrowseAddTracksDialog({
                         )}
                       </div>
                     </div>
-
                     {/* Add Button */}
                     <div className="flex-shrink-0">
                       {isInPlaylist ? (

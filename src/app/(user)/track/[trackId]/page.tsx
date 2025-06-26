@@ -10,7 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import {
   Play,
   Pause,
@@ -147,10 +153,11 @@ export default function TrackDetailsPage() {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/comments/song/${trackId}`,
         { headers }
-      );      if (response.ok) {
+      );
+      if (response.ok) {
         const result = await response.json();
         console.log("Comments API response:", result);
-        
+
         // Handle different response structures
         if (Array.isArray(result)) {
           // Direct array response
@@ -395,7 +402,8 @@ export default function TrackDetailsPage() {
                         {track.likeCount.toLocaleString()} likes
                       </div>
                     )}
-                  </div>                  {/* Action Buttons */}
+                  </div>{" "}
+                  {/* Action Buttons */}
                   <div className="flex flex-wrap gap-3">
                     <Button
                       onClick={handlePlayToggle}
@@ -417,7 +425,8 @@ export default function TrackDetailsPage() {
                         size="lg"
                         song={track}
                       />
-                    )}{" "}                    {track.lyrics && (
+                    )}{" "}
+                    {track.lyrics && (
                       <Button
                         onClick={() => setShowLyricsModal(true)}
                         variant="outline"
@@ -428,10 +437,7 @@ export default function TrackDetailsPage() {
                       </Button>
                     )}
                     {session?.user && (
-                      <AddToPlaylistButton
-                        trackId={track._id}
-                        size="lg"
-                      />
+                      <AddToPlaylistButton trackId={track._id} size="lg" />
                     )}
                     <Button onClick={handleShare} variant="outline" size="lg">
                       <Share2 className="mr-2" size={20} />
@@ -682,7 +688,8 @@ export default function TrackDetailsPage() {
 
       {/* Flag Report Dialog */}
       {track && (
-        <FlagReportDialog          trackId={track._id}
+        <FlagReportDialog
+          trackId={track._id}
           trackTitle={track.title}
           trackArtist={track.userId.name || track.userId.username}
           isOpen={showFlagDialog}

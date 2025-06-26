@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 
 /**
  * Custom hook to manage focus restoration and modal cleanup
@@ -17,32 +17,37 @@ export const useFocusRestore = (modalStates: boolean[]) => {
   const restoreFocus = () => {
     setTimeout(() => {
       // Remove all focus guards and portal containers
-      document.querySelectorAll('[data-radix-focus-guard], [data-radix-portal]').forEach(el => {
-        el.remove();
-      });
-      
+      document
+        .querySelectorAll("[data-radix-focus-guard], [data-radix-portal]")
+        .forEach((el) => {
+          el.remove();
+        });
+
       // Reset body styles that might be set by the dialog
-      document.body.style.pointerEvents = '';
-      document.body.style.overflow = '';
-      document.body.style.paddingRight = '';
-      
+      document.body.style.pointerEvents = "";
+      document.body.style.overflow = "";
+      document.body.style.paddingRight = "";
+
       // Clear any inert attributes
-      document.querySelectorAll('[inert]').forEach(el => {
-        el.removeAttribute('inert');
+      document.querySelectorAll("[inert]").forEach((el) => {
+        el.removeAttribute("inert");
       });
-      
+
       // Force focus back to the previously focused element or page
-      if (lastFocusedElement.current && document.contains(lastFocusedElement.current)) {
+      if (
+        lastFocusedElement.current &&
+        document.contains(lastFocusedElement.current)
+      ) {
         lastFocusedElement.current.focus();
       } else if (pageRef.current) {
         pageRef.current.focus();
       } else {
         document.body.focus();
       }
-      
+
       // Ensure the page is interactive
       if (pageRef.current) {
-        pageRef.current.style.pointerEvents = 'auto';
+        pageRef.current.style.pointerEvents = "auto";
       }
     }, 50);
   };
@@ -57,11 +62,13 @@ export const useFocusRestore = (modalStates: boolean[]) => {
 
   // Monitor modal states for cleanup
   useEffect(() => {
-    const anyModalOpen = modalStates.some(state => state);
-    
+    const anyModalOpen = modalStates.some((state) => state);
+
     if (!anyModalOpen) {
       const timer = setTimeout(() => {
-        document.querySelectorAll('[data-radix-focus-guard]').forEach(trap => trap.remove());
+        document
+          .querySelectorAll("[data-radix-focus-guard]")
+          .forEach((trap) => trap.remove());
         if (document.activeElement !== document.body) {
           document.body.focus();
           document.body.blur();
@@ -74,28 +81,30 @@ export const useFocusRestore = (modalStates: boolean[]) => {
   // Emergency click handler to restore interactivity
   useEffect(() => {
     const handleGlobalClick = () => {
-      const anyModalOpen = modalStates.some(state => state);
-      
+      const anyModalOpen = modalStates.some((state) => state);
+
       if (!anyModalOpen) {
-        document.querySelectorAll('[data-radix-focus-guard], [data-radix-portal]').forEach(el => {
-          el.remove();
-        });
-        document.body.style.pointerEvents = '';
-        document.body.style.overflow = '';
-        document.querySelectorAll('[inert]').forEach(el => {
-          el.removeAttribute('inert');
+        document
+          .querySelectorAll("[data-radix-focus-guard], [data-radix-portal]")
+          .forEach((el) => {
+            el.remove();
+          });
+        document.body.style.pointerEvents = "";
+        document.body.style.overflow = "";
+        document.querySelectorAll("[inert]").forEach((el) => {
+          el.removeAttribute("inert");
         });
       }
     };
 
-    document.addEventListener('click', handleGlobalClick, true);
-    return () => document.removeEventListener('click', handleGlobalClick, true);
+    document.addEventListener("click", handleGlobalClick, true);
+    return () => document.removeEventListener("click", handleGlobalClick, true);
   }, modalStates);
 
   return {
     pageRef,
     storeFocusedElement,
     restoreFocus,
-    createCloseHandler
+    createCloseHandler,
   };
 };

@@ -118,13 +118,16 @@ const PlaylistRow = ({
     </TableCell>
     <TableCell className="hidden xl:table-cell">
       {playlist.followers || 0}
-    </TableCell>    <TableCell>
+    </TableCell>{" "}
+    <TableCell>
       <Badge variant={playlist.isPublic ? "outline" : "secondary"}>
         {playlist.isPublic ? "Public" : "Private"}
       </Badge>
     </TableCell>
     <TableCell className="text-right">
-      <DropdownMenu>        <DropdownMenuTrigger asChild>
+      <DropdownMenu>
+        {" "}
+        <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="h-8 w-8 p-0">
             <span className="sr-only">Open menu</span>
             <LuMessageSquareMore className="h-4 w-4" />
@@ -243,7 +246,8 @@ const PlaylistsPage = () => {
         playlist.description
           ?.toLowerCase()
           .includes(searchQuery.toLowerCase()) ||
-        false;      const matchesStatus =
+        false;
+      const matchesStatus =
         statusFilter === "all" ||
         (statusFilter === "public" && playlist.isPublic === true) ||
         (statusFilter === "private" && playlist.isPublic === false);
@@ -345,7 +349,8 @@ const PlaylistsPage = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-        </div>        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        </div>{" "}
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -367,7 +372,10 @@ const PlaylistsPage = () => {
                 <TableHead className="w-[60px]"></TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead className="hidden md:table-cell">Creator</TableHead>
-                <TableHead className="hidden lg:table-cell">Tracks</TableHead>                <TableHead className="hidden xl:table-cell">
+                <TableHead className="hidden lg:table-cell">
+                  Tracks
+                </TableHead>{" "}
+                <TableHead className="hidden xl:table-cell">
                   Followers
                 </TableHead>
                 <TableHead>Visibility</TableHead>

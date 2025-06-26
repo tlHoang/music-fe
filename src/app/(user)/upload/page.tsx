@@ -124,14 +124,16 @@ const UploadPage = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();    if (!file || !title || !lyrics.trim()) {
+    e.preventDefault();
+    if (!file || !title || !lyrics.trim()) {
       setMessage("Please provide a file, title, and lyrics.");
       return;
     }
 
     const formData = new FormData();
     formData.append("audio", file);
-    if (cover) formData.append("cover", cover);    formData.append("title", title);
+    if (cover) formData.append("cover", cover);
+    formData.append("title", title);
     formData.append("lyrics", lyrics);
     formData.append("visibility", visibility);
     if (selectedGenreIds.length > 0) {
@@ -192,7 +194,8 @@ const UploadPage = () => {
 
       if (!response.ok) {
         throw new Error("Failed to upload music");
-      }      setMessage("Upload successful!");
+      }
+      setMessage("Upload successful!");
       setTitle("");
       setLyrics("");
       setVisibility("PUBLIC");
@@ -246,7 +249,8 @@ const UploadPage = () => {
               Track Title*
             </label>
             <Input
-              id="title"              type="text"
+              id="title"
+              type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Give your track a name"

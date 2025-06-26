@@ -131,7 +131,7 @@ export default function PlaylistPage() {
       month: "long",
       day: "numeric",
     });
-  };  // Fetch playlist data
+  }; // Fetch playlist data
   const fetchPlaylistData = useCallback(async () => {
     if (!playlistId) return;
 
@@ -239,7 +239,6 @@ export default function PlaylistPage() {
             </div>
             <div className="flex-1 text-center md:text-left">
               <h1 className="text-3xl font-bold mb-2">{playlist.name}</h1>
-
               <div className="mb-4">
                 <p className="text-gray-200">
                   Created by{" "}
@@ -261,7 +260,8 @@ export default function PlaylistPage() {
                     {formatDate(playlist.createdAt)}
                   </span>
                 </div>
-              </div>              <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+              </div>{" "}
+              <div className="flex flex-wrap gap-3 justify-center md:justify-start">
                 <Button
                   onClick={playAllTracks}
                   className="bg-white text-black hover:bg-gray-100"
@@ -280,7 +280,7 @@ export default function PlaylistPage() {
                 {isOwner && (
                   <BrowseAddTracksDialog
                     playlistId={playlistId}
-                    playlistSongs={playlist.songs.map(song => song._id)}
+                    playlistSongs={playlist.songs.map((song) => song._id)}
                     onTrackAdded={() => {
                       // Refresh playlist data when tracks are added
                       fetchPlaylistData();
@@ -293,7 +293,8 @@ export default function PlaylistPage() {
                     playlistId={playlistId}
                     variant="button"
                     size="md"
-                    className="border-white text-black hover:bg-white/20"                  />
+                    className="border-white text-black hover:bg-white/20"
+                  />
                 )}
               </div>
             </div>

@@ -124,7 +124,7 @@ export default function CreatePlaylistPage() {
         const errorMessage = data.data ? data.data.message : data.message;
         toast.error(errorMessage || "Failed to create playlist");
         return;
-      }      // Check for different success response formats
+      } // Check for different success response formats
       if (response.ok) {
         let playlistId;
 

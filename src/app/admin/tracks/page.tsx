@@ -106,7 +106,8 @@ const formatDate = (dateString?: string) => {
   return new Date(dateString).toLocaleDateString();
 };
 
-const TrackRow = ({  track,
+const TrackRow = ({
+  track,
   onViewDetails,
   onEditTrack,
   onDeleteTrack,
@@ -221,7 +222,8 @@ const TrackRow = ({  track,
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuItem onClick={() => onViewDetails(track._id)}>
-              View Details            </DropdownMenuItem>
+              View Details{" "}
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onEditTrack(track)}>
               Edit Track
             </DropdownMenuItem>
@@ -241,7 +243,7 @@ const TrackRow = ({  track,
 
 const TracksPage = () => {
   const { data: session } = useSession();
-  
+
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -398,7 +400,8 @@ const TracksPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };  useEffect(() => {
+  };
+  useEffect(() => {
     fetchTracks();
     fetchGenres();
   }, [session, currentPage]);
@@ -407,7 +410,9 @@ const TracksPage = () => {
   useEffect(() => {
     if (!isDeleteDialogOpen && !isEditDialogOpen && !isViewDetailsDialogOpen) {
       const timer = setTimeout(() => {
-        document.querySelectorAll('[data-radix-focus-guard]').forEach(trap => trap.remove());
+        document
+          .querySelectorAll("[data-radix-focus-guard]")
+          .forEach((trap) => trap.remove());
         if (document.activeElement !== document.body) {
           document.body.focus();
           document.body.blur();
@@ -419,19 +424,25 @@ const TracksPage = () => {
 
   useEffect(() => {
     const handleGlobalClick = () => {
-      if (!isDeleteDialogOpen && !isEditDialogOpen && !isViewDetailsDialogOpen) {
-        document.querySelectorAll('[data-radix-focus-guard], [data-radix-portal]').forEach(el => {
-          el.remove();
-        });
-        document.body.style.pointerEvents = '';
-        document.body.style.overflow = '';
-        document.querySelectorAll('[inert]').forEach(el => {
-          el.removeAttribute('inert');
+      if (
+        !isDeleteDialogOpen &&
+        !isEditDialogOpen &&
+        !isViewDetailsDialogOpen
+      ) {
+        document
+          .querySelectorAll("[data-radix-focus-guard], [data-radix-portal]")
+          .forEach((el) => {
+            el.remove();
+          });
+        document.body.style.pointerEvents = "";
+        document.body.style.overflow = "";
+        document.querySelectorAll("[inert]").forEach((el) => {
+          el.removeAttribute("inert");
         });
       }
     };
-    document.addEventListener('click', handleGlobalClick, true);
-    return () => document.removeEventListener('click', handleGlobalClick, true);
+    document.addEventListener("click", handleGlobalClick, true);
+    return () => document.removeEventListener("click", handleGlobalClick, true);
   }, [isDeleteDialogOpen, isEditDialogOpen, isViewDetailsDialogOpen]);
 
   // Function to get genre name from genre ID
@@ -460,7 +471,8 @@ const TracksPage = () => {
       // Get the mapped genre name for comparison
       const trackGenreName = getGenreName(track.genres || track.genre);
       const matchesGenre =
-        genreFilter === "all" || trackGenreName === genreFilter;      const matchesStatus =
+        genreFilter === "all" || trackGenreName === genreFilter;
+      const matchesStatus =
         statusFilter === "all" ||
         (statusFilter === "public" && track.visibility !== "PRIVATE") ||
         (statusFilter === "private" && track.visibility === "PRIVATE");
@@ -496,7 +508,7 @@ const TracksPage = () => {
         };
       }
     }
-  };  // Handle viewing track details
+  }; // Handle viewing track details
   const handleViewDetails = async (trackId: string) => {
     const track = tracks.find((t) => t._id === trackId);
     if (track) {
@@ -565,7 +577,8 @@ const TracksPage = () => {
     } catch (error) {
       console.error("Error updating track:", error);
       toast.error("Failed to update track");
-    }  };
+    }
+  };
 
   // Handle deleting a track
   const handleDeleteTrack = (trackId: string) => {
@@ -641,7 +654,8 @@ const TracksPage = () => {
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Status" />
-          </SelectTrigger>          <SelectContent>
+          </SelectTrigger>{" "}
+          <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="public">Public</SelectItem>
             <SelectItem value="private">Private</SelectItem>
@@ -700,7 +714,8 @@ const TracksPage = () => {
                     </TableRow>
                   ))
               ) : filteredTracks.length > 0 ? (
-                filteredTracks.map((track) => (                  <TrackRow
+                filteredTracks.map((track) => (
+                  <TrackRow
                     key={track._id}
                     track={track}
                     onViewDetails={handleViewDetails}
@@ -1112,7 +1127,9 @@ const TracksPage = () => {
                         setIsViewDetailsDialogOpen(false);
                         handleEditTrack(detailTrack);
                       }}
-                    >                      <LuPencil className="h-4 w-4 mr-2" />
+                    >
+                      {" "}
+                      <LuPencil className="h-4 w-4 mr-2" />
                       Edit Track
                     </Button>
                     <Button

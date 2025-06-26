@@ -5,7 +5,12 @@ import { useSession } from "next-auth/react";
 import { sendRequest } from "@/utils/api";
 import MusicPlayer from "@/components/ui/music-player";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import Link from "next/link";
 import { usePlayer } from "@/components/app/player-context";
 import LikeButton from "@/components/user/like-button.component";
@@ -217,19 +222,22 @@ const PlayerPage = () => {
                     }
                   }}
                   autoPlay={isPlaying}
-                />                {/* Like button for the current track */}
-                <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">                  <div className="flex items-center gap-3">
+                />{" "}
+                {/* Like button for the current track */}
+                <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  {" "}
+                  <div className="flex items-center gap-3">
                     <LikeButton
                       songId={currentDisplayTrack._id}
                       size="md"
                       showCount={true}
                     />
-                    
+
                     <AddToPlaylistButton
                       trackId={currentDisplayTrack._id}
                       size="md"
                     />
-                    
+
                     {currentDisplayTrack.lyrics && (
                       <Button
                         onClick={() => setShowLyricsModal(true)}
@@ -241,7 +249,6 @@ const PlayerPage = () => {
                       </Button>
                     )}
                   </div>
-
                   <div className="text-sm text-gray-500">
                     Track {displayIndex + 1} of {tracks.length}
                   </div>
@@ -327,11 +334,17 @@ const PlayerPage = () => {
               Lyrics - {currentDisplayTrack?.title}
             </DialogTitle>
           </DialogHeader>
-          <div className="mt-4">            <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              by {(currentDisplayTrack as any)?.userId?.username || (currentDisplayTrack as any)?.artist || "Unknown Artist"}
+          <div className="mt-4">
+            {" "}
+            <div className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              by{" "}
+              {(currentDisplayTrack as any)?.userId?.username ||
+                (currentDisplayTrack as any)?.artist ||
+                "Unknown Artist"}
             </div>
             <div className="whitespace-pre-line text-gray-800 dark:text-gray-200 leading-relaxed">
-              {currentDisplayTrack?.lyrics || "No lyrics available for this track."}
+              {currentDisplayTrack?.lyrics ||
+                "No lyrics available for this track."}
             </div>
           </div>
         </DialogContent>
