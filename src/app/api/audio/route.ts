@@ -22,7 +22,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
-      );    }
+      );
+    }
 
     const signedUrlResponse = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/songs/get-signed-url`,
@@ -40,7 +41,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: `Failed to get signed URL: ${signedUrlResponse.statusText}` },
         { status: signedUrlResponse.status }
-      );    }
+      );
+    }
 
     const responseData = await signedUrlResponse.json();
     const signedUrl = responseData.data?.signedUrl;
@@ -49,7 +51,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: "No signed URL returned from the server" },
         { status: 500 }
-      );    }
+      );
+    }
 
     try {
       new URL(signedUrl);
@@ -63,14 +66,16 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(
           { error: `Failed to fetch audio: ${response.statusText}` },
           { status: response.status }
-        );      }
+        );
+      }
 
       const audioData = await response.arrayBuffer();
 
       const contentType = response.headers.get("content-type") || "audio/mpeg";
 
       return new NextResponse(audioData, {
-        status: 200,        headers: {
+        status: 200,
+        headers: {
           "Content-Type": contentType,
           "Content-Length": audioData.byteLength.toString(),
           "Cache-Control": "public, max-age=31536000",

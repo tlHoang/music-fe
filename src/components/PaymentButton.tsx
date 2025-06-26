@@ -41,21 +41,22 @@ export function PaymentButton({
   const { data: session } = useSession();
   const handlePayment = async () => {
     setLoading(true);
-    try {let response;
+    try {
+      let response;
       if (planId) {
         response = await fetch("/api/payments/create-subscription", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-            body: JSON.stringify({
-              plan: planId,
-              durationMonths,
-              buyerName,
-              buyerEmail,
-            }),
-          }
-        );      } else {
+          body: JSON.stringify({
+            plan: planId,
+            durationMonths,
+            buyerName,
+            buyerEmail,
+          }),
+        });
+      } else {
         response = await fetch("/api/payments/create-link", {
           method: "POST",
           headers: {

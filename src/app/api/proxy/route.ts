@@ -31,7 +31,8 @@ export const GET = async (request: NextRequest) => {
       },
     });
 
-    if (!response.ok) {      console.error(
+    if (!response.ok) {
+      console.error(
         `Failed to fetch audio: ${response.status} ${response.statusText}`
       );
 
