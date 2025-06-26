@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Loader2, CreditCard } from "lucide-react";
 
@@ -37,20 +38,16 @@ export function PaymentButton({
   onError,
 }: PaymentButtonProps) {
   const [loading, setLoading] = useState(false);
-
+  const { data: session } = useSession();
   const handlePayment = async () => {
     setLoading(true);
-    try {
-      let response;
+    try {let response;
       if (planId) {
-        // Subscription payment (use Next.js API route for session/JWT support)
-        response = await fetch(
-          "http://localhost:8888/payments/create-subscription",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+        response = await fetch("/api/payments/create-subscription", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
             body: JSON.stringify({
               plan: planId,
               durationMonths,
@@ -58,10 +55,8 @@ export function PaymentButton({
               buyerEmail,
             }),
           }
-        );
-      } else {
-        // Generic payment
-        response = await fetch("http://localhost:8888/payments/create-link", {
+        );      } else {
+        response = await fetch("/api/payments/create-link", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

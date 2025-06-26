@@ -1,27 +1,35 @@
-// app/api/payments/create-link/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from "@/auth";
+import { IUser } from "@/types/next-auth";
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8888';
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const session = await auth();
     
-    // Get auth token from request headers (if you have authentication)
-    const authHeader = request.headers.get('authorization');
-    
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
-    
-    // Add auth header if present
-    if (authHeader) {
-      headers['Authorization'] = authHeader;
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
     }
+
+    const accessToken = (session.user as IUser).access_token;
+    
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: "No access token available" },
+        { status: 401 }
+      );
+    }    const body = await request.json();
     
     const response = await fetch(`${BACKEND_URL}/payments/create-link`, {
       method: 'POST',
-      headers,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
       body: JSON.stringify(body),
     });
 

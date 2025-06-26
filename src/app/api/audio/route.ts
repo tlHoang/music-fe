@@ -3,7 +3,6 @@ import { getToken } from "next-auth/jwt";
 
 export async function GET(request: NextRequest) {
   try {
-    // Extract the audio URL from the query parameter
     const url = request.nextUrl.searchParams.get("url");
 
     if (!url) {
@@ -13,10 +12,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Decode the URL to handle any encoded characters
     const decodedUrl = decodeURIComponent(url);
-
-    // Get the auth token from session with the secret parameter
     const token = await getToken({
       req: request,
       secret: process.env.AUTH_SECRET,
@@ -26,10 +22,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 }
-      );
-    }
+      );    }
 
-    // First, get a signed URL from our backend
     const signedUrlResponse = await fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/songs/get-signed-url`,
       {
@@ -46,10 +40,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: `Failed to get signed URL: ${signedUrlResponse.statusText}` },
         { status: signedUrlResponse.status }
-      );
-    }
+      );    }
 
-    // Parse the signed URL from the response
     const responseData = await signedUrlResponse.json();
     const signedUrl = responseData.data?.signedUrl;
 
@@ -57,13 +49,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         { error: "No signed URL returned from the server" },
         { status: 500 }
-      );
-    }
+      );    }
 
-    // Now fetch the actual audio using the signed URL
-    // Fix the TypeError by ensuring the URL is valid
     try {
-      // Validate URL format
       new URL(signedUrl);
 
       const response = await fetch(signedUrl);
@@ -75,22 +63,17 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(
           { error: `Failed to fetch audio: ${response.statusText}` },
           { status: response.status }
-        );
-      }
+        );      }
 
-      // Get the audio data as an array buffer
       const audioData = await response.arrayBuffer();
 
-      // Get the content type from the response
       const contentType = response.headers.get("content-type") || "audio/mpeg";
 
-      // Create a new response with the audio data and correct headers
       return new NextResponse(audioData, {
-        status: 200,
-        headers: {
+        status: 200,        headers: {
           "Content-Type": contentType,
           "Content-Length": audioData.byteLength.toString(),
-          "Cache-Control": "public, max-age=31536000", // Cache for a year
+          "Cache-Control": "public, max-age=31536000",
         },
       });
     } catch (urlError: any) {

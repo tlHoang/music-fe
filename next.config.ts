@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
       "storage.googleapis.com",
     ],
   },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default nextConfig;

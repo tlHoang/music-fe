@@ -3,7 +3,6 @@ import { getToken } from "next-auth/jwt";
 
 export const GET = async (request: NextRequest) => {
   try {
-    // Get the URL from the query parameter
     const url = request.nextUrl.searchParams.get("url");
 
     if (!url) {
@@ -13,10 +12,8 @@ export const GET = async (request: NextRequest) => {
       );
     }
 
-    // Decode the URL to handle any encoded characters
     const decodedUrl = decodeURIComponent(url);
 
-    // Extract the access token from the session
     const token = await getToken({ req: request });
     const accessToken = token?.user?.access_token;
 
@@ -27,21 +24,17 @@ export const GET = async (request: NextRequest) => {
       );
     }
 
-    // Fetch the audio file from Firebase Storage with the user's token
     const response = await fetch(decodedUrl, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
-        // Add Firebase Storage headers
         Origin: request.nextUrl.origin,
       },
     });
 
-    if (!response.ok) {
-      console.error(
+    if (!response.ok) {      console.error(
         `Failed to fetch audio: ${response.status} ${response.statusText}`
       );
 
-      // For debugging - log headers
       const responseHeaders = Object.fromEntries(response.headers.entries());
       console.error("Response headers:", responseHeaders);
 
@@ -51,19 +44,16 @@ export const GET = async (request: NextRequest) => {
       );
     }
 
-    // Get the audio data as an array buffer
     const audioData = await response.arrayBuffer();
 
-    // Get the content type from the response
     const contentType = response.headers.get("content-type") || "audio/mpeg";
 
-    // Create a new response with the audio data
     return new NextResponse(audioData, {
       status: 200,
       headers: {
         "Content-Type": contentType,
         "Content-Length": audioData.byteLength.toString(),
-        "Cache-Control": "public, max-age=31536000", // Cache for a year
+        "Cache-Control": "public, max-age=31536000",
       },
     });
   } catch (error) {

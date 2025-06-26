@@ -1,4 +1,3 @@
-// app/api/subscriptions/plans/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8888';

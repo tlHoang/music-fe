@@ -1,18 +1,14 @@
-// app/api/subscriptions/stats/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8888';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get auth token from request headers
     const authHeader = request.headers.get('authorization');
     
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+    const headers: Record<string, string> = {      'Content-Type': 'application/json',
     };
     
-    // Add auth header if present
     if (authHeader) {
       headers['Authorization'] = authHeader;
     }

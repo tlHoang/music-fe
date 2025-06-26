@@ -42,7 +42,6 @@ export default async function RootLayout({
             disableTransitionOnChange
           >
             <GlobalModalFix />
-            {/* <UserHeader /> Removed from root layout to prevent header on login/public pages */}
             {children}
           </ThemeProvider>
         </SessionProviderWrapper>
